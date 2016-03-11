@@ -30,12 +30,13 @@ import java.util.Set;
  * keyword index(e.g. lower case letters, keywords
  * excluding special characters etc).
  * @author fil
+ * @author gkirtzou
  */
 @Entity
 public class ClassInvertedIndex {
     @PrimaryKey
     private String classNameIndex;
-    private Set<String> classNames;
+    private Set<String> classURIs;
     
     /**
      * Defines the classNameIndex.
@@ -53,9 +54,19 @@ public class ClassInvertedIndex {
      */
     public void setClassNames(Set<String> data)
     {
-        classNames=data;
+        classURIs=data;
     }
     
+     /**
+     * Defines the classNames.
+     * @param data An reference RDF classes 
+     * to be added in the Term index. 
+     * @author gkirtzou
+     */
+    public void addClassNames(String data)
+    {
+        classURIs.add(data);
+    }
     /**
      * Retrieves the classNames.
      * @return The set of referencing RDF classes
@@ -63,7 +74,7 @@ public class ClassInvertedIndex {
      */
     public Set<String> getClassNames()
     {
-        return classNames;
+        return classURIs;
     }
     
     /**
@@ -73,5 +84,13 @@ public class ClassInvertedIndex {
     public String getClassNameIndex()
     {
         return classNameIndex;
+    }
+    
+    @Override
+    public String toString() {
+        String str = "[ Class name:" + this.classNameIndex
+                + "\n Class References:\n"+ this.classURIs.toString()
+                + "]\n";
+        return(str);
     }
 }

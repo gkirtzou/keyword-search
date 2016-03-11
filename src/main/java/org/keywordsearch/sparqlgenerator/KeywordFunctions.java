@@ -419,10 +419,10 @@ public class KeywordFunctions  {
             if(dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)){
                 isProperty=1;
             }
-            if(dbStorage.containsLiteralInvertedIndex(currentKeyLowerCase)){
+         /*   if(dbStorage.containsLiteralInvertedIndex(currentKeyLowerCase)){
                 isLiteral=1;
             }
-            
+        */    
             if(isClass!=0 || isProperty!=0 || isLiteral!=0){
             
                 HashMap currentKeyword = new HashMap();

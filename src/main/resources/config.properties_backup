@@ -4,6 +4,7 @@ query_prefix=dbo
 endpoint=http://leonardo.imis.athena-innovation.gr:8080/sparql
 named_graph= http://dbpedia.org 
 prefixes=PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \
+         PREFIX d2r: <http://sites.wiwiss.fu-berlin.de/suhl/bizer/d2r-server/config.rdf#> 
          PREFIX dbc: <http://dbpedia.org/ontology/> \
 	 PREFIX owl: <http://www.w3.org/2002/07/owl#> \
 	 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \

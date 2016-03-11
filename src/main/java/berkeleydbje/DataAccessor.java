@@ -30,6 +30,7 @@ import com.sleepycat.persist.SecondaryIndex;
  * This class is used to access the data
  * of the entity store
  * @author fil
+ * @author gkirtzou
  */
 
 public class DataAccessor {
@@ -42,26 +43,41 @@ public class DataAccessor {
      */
     public DataAccessor(EntityStore store)
         throws DatabaseException {
-        // Primary key for each class
-        classByName = store.getPrimaryIndex(
-            String.class, RdfClass.class);
-        propertyByName = store.getPrimaryIndex(
-            String.class, Property.class);
-        literalByName = store.getPrimaryIndex(
-            String.class, Literal.class);
+        // RDF Class
+        classIndex = store.getPrimaryIndex(
+                String.class, RdfClass.class);
+        classByName = store.getSecondaryIndex(
+            classIndex, String.class, "className");
         classInvertedIndexByName = store.getPrimaryIndex(
             String.class, ClassInvertedIndex.class);
+        
+        // RDF Property 
+        propertyIndex = store.getPrimaryIndex(
+            String.class, Property.class);
+        propertyByName = store.getSecondaryIndex(
+            propertyIndex, String.class, "propertyName");
         propertyInvertedIndexByName = store.getPrimaryIndex(
             String.class, PropertyInvertedIndex.class);
+     /*   literalByName = store.getPrimaryIndex(
+            String.class, Literal.class);
+        
+
         literalInvertedIndexByName = store.getPrimaryIndex(
-            String.class, LiteralInvertedIndex.class);
+            String.class, LiteralInvertedIndex.class);*/
         }
     
     // Inventory Accessors
-    PrimaryIndex<String,RdfClass> classByName;
-    PrimaryIndex<String,Property> propertyByName;
-    PrimaryIndex<String,Literal> literalByName;
+    // RDF Class
+    PrimaryIndex<String,RdfClass> classIndex;
+    SecondaryIndex<String, String, RdfClass> classByName;
     PrimaryIndex<String,ClassInvertedIndex> classInvertedIndexByName;
+    
+    // RDF Property
+    PrimaryIndex<String,Property> propertyIndex;
+    SecondaryIndex<String, String, Property> propertyByName;
     PrimaryIndex<String,PropertyInvertedIndex> propertyInvertedIndexByName;
+    
+    // RDF Literal
+    PrimaryIndex<String,Literal> literalByName;   
     PrimaryIndex<String,LiteralInvertedIndex> literalInvertedIndexByName;
 }

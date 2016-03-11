@@ -30,7 +30,7 @@ import java.util.logging.Logger;
 
 /**
  * Class for the constants
- * @author penny
+ * @author penny, gkirtzou
  */
 public class ConstantsSingleton {
     
@@ -41,6 +41,10 @@ public class ConstantsSingleton {
      */
     public String endpoint = "";
     
+    /*
+     * Named graph
+     */
+    public String named_graph = null;
     /**
      * Prefixes to be used
      */
@@ -96,9 +100,22 @@ public class ConstantsSingleton {
         }
         
         endpoint = configFile.getProperty("endpoint");
+        if (endpoint != null) {
+            endpoint = endpoint.trim();
+        }
+        named_graph = configFile.getProperty("named_graph");
+        if (named_graph != null) {
+            named_graph = named_graph.trim();
+        }
         prefixes = configFile.getProperty("prefixes");
         query_prefix = configFile.getProperty("query_prefix");
-        bdbfiles_path = configFile.getProperty("bdbfiles_path");
+        if (query_prefix != null) {
+            query_prefix = query_prefix.trim();
+        }
+        bdbfiles_path = configFile.getProperty("bdbfiles_path");   
+        if (bdbfiles_path != null) {
+            bdbfiles_path = bdbfiles_path.trim();
+        }
     }
     
     /**

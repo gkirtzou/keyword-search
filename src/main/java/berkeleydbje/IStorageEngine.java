@@ -24,10 +24,11 @@ import java.util.Set;
 
 /**
  * This interface should be implemented by any class that describes
- * data structures used to form the keyword index.
+ * data structures used to form the Term index.
  *
  * @author fil
  * @author serafeim
+ * @author gkirtzou
  */
 public interface IStorageEngine {
     boolean containsClass(String className); // called to check a RDF class existence in keyword index

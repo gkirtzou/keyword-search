@@ -27,12 +27,14 @@ import java.util.Scanner;
 import java.util.*;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.EntityCursor;
+import java.io.IOException;
 
 /**
  * This class creates a BerkeleyDB data store for
- * creating,accessing and modifying the keyword
+ * creating, accessing and modifying the Term 
  * index structures.
  * @author fil
+ * @author gkirtzou
  */
 public class DatabasePut{
     private static File myDbEnvPath;
@@ -72,21 +74,60 @@ public class DatabasePut{
      * Inserts into the database the RDF classes. 
      * @param prefixes The specified prefixes
      * @param serverEndpoint The SPARQL endpoint
+     * @param namedGraph The named graph to explore. If null, explore the whole dataset
+     *                   of the endpoint.
      * @throws DatabaseException 
      */
-    public void loadClassDb(String prefixes,String serverEndpoint) 
+    public void loadClassDb(String prefixes, String serverEndpoint, String namedGraph) 
         throws DatabaseException {
 
             KeywordIndex ksearch=new KeywordIndex();
-            Set<String> classNames=ksearch.getRDFClassNames(prefixes,serverEndpoint);
-            RdfClass theClass = new RdfClass();
-            Iterator setIterator = classNames.iterator();
+            Set<String> classNames=ksearch.getRDFClassNames(prefixes, serverEndpoint, namedGraph);
+            Iterator<String> setIterator = classNames.iterator();
             while (setIterator.hasNext())
             {
-                theClass.setClassName(setIterator.next().toString());
-                da.classByName.put(theClass);
+                // Split URI to prefix and name
+                String str = setIterator.next();
+                int i=this.splitURI(str);
+                
+                // Create RDF class object
+                RdfClass rdfClass = new RdfClass();
+                rdfClass.setClassName(str.substring(i));
+                rdfClass.setPrefix(str.substring(0, i));
+                rdfClass.setURI(str);
+                //System.out.println(rdfClass);
+                da.classIndex.put(rdfClass);
             }
             
+    }
+    
+     /**
+     * Inserts into the database the RDF classes. 
+     * @param csvFile
+     * @throws DatabaseException 
+     * @throws java.io.IOException
+     * @author gkirtzou
+     */
+    public void loadClassDb(String csvFile) 
+        throws DatabaseException, IOException {
+
+            KeywordIndex ksearch=new KeywordIndex();
+            Set<String> classNames=ksearch.getRDFClassNames(csvFile);
+            Iterator<String> setIterator = classNames.iterator();
+            while (setIterator.hasNext())
+            {
+                // Split URI to prefix and name
+                String str = setIterator.next();
+                int i=this.splitURI(str);
+                
+                // Create RDF class object
+                RdfClass rdfClass = new RdfClass();
+                rdfClass.setClassName(str.substring(i));
+                rdfClass.setPrefix(str.substring(0, i));
+                rdfClass.setURI(str);
+                //System.out.println(rdfClass);
+                da.classIndex.put(rdfClass);
+            }
     }
     
     /**
@@ -94,16 +135,35 @@ public class DatabasePut{
      * @param vocabulary The given RDF vocabulary 
      * @param prefixes The specified prefixes
      * @param serverEndpoint The SPARQL endpoint
+     * @param namedGraph The named graph to explore. If null, explore the whole dataset
+     *                   of the endpoint.
      * @throws DatabaseException 
      */
-    public void loadPropertyDb(String vocabulary,String prefixes,String serverEndpoint)
+    public void loadPropertyDb(String vocabulary,String prefixes,String serverEndpoint, String namedGraph)
         throws DatabaseException {
 
         KeywordIndex ksearch=new KeywordIndex();
-        Set<String> allPropertiesNames=ksearch.getRDFPropertiesNames(prefixes,serverEndpoint);
-        Iterator setIterator = allPropertiesNames.iterator();
-        while (setIterator.hasNext())
-        {
+        Map<String, Set<String[]>>  properties=ksearch.getRDFPropertiesNames(prefixes, serverEndpoint, namedGraph);
+        for (Map.Entry<String, Set<String[]>> property : properties.entrySet()) {
+        
+           // Split URI to prefix and name
+           String str = property.getKey().trim();
+           int i=this.splitURI(str);
+                
+           // Create RDF property object
+           Property rdfProperty = new Property();
+           rdfProperty.setURI(str);
+           rdfProperty.setPropertyName(str.substring(i));
+           rdfProperty.setClassName(property.getValue());
+           
+           
+           
+           // Add RDF property object to term index
+           System.out.println(rdfProperty);
+           da.propertyIndex.put(rdfProperty);
+           
+                      
+            /*
             EntityCursor<RdfClass> SubjectClass =
                 da.classByName.entities();
             String Property=setIterator.next().toString();
@@ -152,7 +212,9 @@ public class DatabasePut{
                       ObjectClass.close();
             }
             SubjectClass.close();
+            */
          }
+         /*
          Map<String, Set<String[]>> propertiesWithSubject=ksearch.getRDFPropertiesWithClasses(prefixes,serverEndpoint);
          for (Map.Entry<String, Set<String[]>> entry : propertiesWithSubject.entrySet())
          {
@@ -165,7 +227,7 @@ public class DatabasePut{
                   da.propertyByName.put(newProperty);
              }    
          }
-             
+         */   
     }
     
     /**
@@ -180,6 +242,7 @@ public class DatabasePut{
      * @param classPropertiesFilepath The file path with the class-properties pairs 
      * @throws DatabaseException 
      */
+    /*
     public void loadLiteralDb(String vocabulary,String prefixes,String serverEndpoint,String classPropertiesFilepath)
         throws DatabaseException {
 
@@ -198,7 +261,7 @@ public class DatabasePut{
             EntityCursor<Property> properties =
                 da.propertyByName.entities();*/
             //String currentFileName="/tmp/literals.csv";
-            while (scanner.hasNextLine()) {
+     /*       while (scanner.hasNextLine()) {
 
                 dataScanner = new Scanner(scanner.nextLine());
                 dataScanner.useDelimiter(",");
@@ -240,6 +303,8 @@ public class DatabasePut{
              }
 
     }
+    */
+    
     
     /**
      * Inserts into the database the RDF class names
@@ -251,37 +316,43 @@ public class DatabasePut{
      */
     public void loadClassCaseInsensitiveIndexes()
         throws DatabaseException {
-         
+              
          EntityCursor<RdfClass> classes =
                 da.classByName.entities();
          try {
-                for (RdfClass curClassName : classes) {
-                    Set<String> newClasses = new HashSet<String>();
-                    ClassInvertedIndex classIndex= new ClassInvertedIndex();
-                    String className=curClassName.getClassName();
-                    String classLowerCaseName=curClassName.getClassName().toLowerCase();
+                for (RdfClass curClass : classes) {
+                    //System.out.println("Working on class " + curClass);
+                    String classLowerCaseName=curClass.getClassName().toLowerCase();
+                    
                     if(!da.classInvertedIndexByName.contains(classLowerCaseName))
                     {
-                        newClasses.add(className);
-                        classIndex.setClassNameIndex(className);
+                        // Create ClassInvertedIndex
+                        ClassInvertedIndex classIndex= new ClassInvertedIndex();
+                        // The lower case class name
+                        classIndex.setClassNameIndex(classLowerCaseName);
+                        // The reference to the current RDF Class
+                        Set<String> newClasses = new HashSet<>();
+                        newClasses.add(curClass.getURI());
                         classIndex.setClassNames(newClasses);
+                        //System.out.println("Insert\n" + classIndex);
+                        // Add the newly ClassInvertedIndex to the index
                         da.classInvertedIndexByName.put(classIndex);
                     }
                     else
                     {
-                        classIndex=da.classInvertedIndexByName.get(classLowerCaseName);
-                        newClasses=classIndex.getClassNames();
-                        newClasses.add(className);
-                        classIndex.setClassNames(newClasses);
+                        ClassInvertedIndex classIndex=da.classInvertedIndexByName.get(classLowerCaseName);
+                        classIndex.addClassNames(curClass.getURI());
+                        //System.out.println("In the index\n " + classIndex);
                         da.classInvertedIndexByName.put(classIndex);
                     }
-                    
+                     
                 }
             } finally {
                 classes.close();
             }
-         
+        
      }
+    
      
       /**
      * Inserts into the database the RDF properties
@@ -291,6 +362,7 @@ public class DatabasePut{
      * excluding special characters etc).
      * @throws DatabaseException 
      */
+    /*
      public void loadPropertyCaseInsensitiveIndexes()
         throws DatabaseException {
          
@@ -324,7 +396,7 @@ public class DatabasePut{
             }
          
      }
-     
+     */
       /**
      * Inserts into the database the RDF literals
      * for the inverted keyword index. The inverted 
@@ -333,6 +405,7 @@ public class DatabasePut{
      * excluding special characters etc).
      * @throws DatabaseException 
      */
+    /*
      public void loadLiteralCaseInsensitiveIndexes()
         throws DatabaseException {
          
@@ -365,4 +438,19 @@ public class DatabasePut{
                 literals.close();
             }
      }
+    */
+    /**
+     * Find the splitting point of a URI. Before the splitting 
+     * point lies the prefix, while after the splitting point
+     * lies the name (suffix).
+     * @param str The URI to split
+     * @return The splitting point. 
+     */
+    private int splitURI(String str) {
+        int i = str.lastIndexOf("/")+1;
+        int j = str.lastIndexOf("#")+1;
+        if (i < j)
+            return j;
+        return(i);
+    }
 }

@@ -22,6 +22,8 @@ package berkeleydbje;
 
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
+import static com.sleepycat.persist.model.Relationship.MANY_TO_ONE;
+import com.sleepycat.persist.model.SecondaryKey;
 //import static com.sleepycat.persist.model.Relationship.*;
 //import com.sleepycat.persist.model.SecondaryKey;
 import java.util.*;
@@ -34,48 +36,68 @@ import java.util.*;
 @Entity
 public class Property {
     
+    /*
+     * The URI of the RDF Property
+     */
     @PrimaryKey
+    private String URI;
+    
+    /*
+     * The name of the RDF property
+     */
+    @SecondaryKey(relate=MANY_TO_ONE)
     private String propertyName;
     
-    //@SecondaryKey(relate=MANY_TO_MANY)
-    private Set<String[]> className;
-    
+    /*
+     * The pairs of URIs of all RDF class <subjects, objects>
+     * met with this RDF property. 
+     * The URI of the RDF class is a unique key
+     * that can be use to find it the within collection.
+     */
+    private Set<String[]> classURI;
+      
+    /*
+     * The Datatype of the object, if property
+     * is entity-to-attribute property. Otherwise
+     * is null.
+     */
     private String literalDatatype;
-  
-   /**
+    
+    /*
+     * Class constructor 
+     */ 
+    public Property() {
+        this.URI = null;
+        this.propertyName = null;
+        this.classURI = null;
+        this.literalDatatype = null;
+    }
+    
+    
+    /**
+     * Defines the RDF URI
+     * @param URI The URI of the RDF property
+     */
+    public void setURI(String URI) {
+        this.URI = URI;
+    }
+    
+    /**
+     * Retrieves the URI of the RDF property
+     * @return The URI of the RDF property
+     */
+    public String getURI() {
+        return this.URI;
+    }   
+    
+    
+    /**
     * Defines the propertyName
     * @param data The name of the property
     */
     public void setPropertyName(String data)
     {
-        propertyName=data;
-    }
-    
-   /**
-    * Defines the literalDatatype
-    * @param data The RDF datatype of the property 's subject 
-    */
-    public void SetLiteralDatatype(String data)
-    {
-        literalDatatype=data;
-    }
-    
-    /**
-    * Retrieves the literalDatatype
-    * @return The RDF datatype of the property 's subject
-    */
-    public String getLiteralDatatype()
-    {
-        return literalDatatype;
-    }
-    
-   /**
-    * Defines the className
-    * @param data The set of the RDF classes related to the property
-    */        
-    public void setClassName(Set<String[]> data)
-    {
-        className=data;
+        this.propertyName=data;
     }
     
     /**
@@ -86,14 +108,64 @@ public class Property {
     {
         return propertyName;
     }
-     
+    
+   /**
+    * Defines the literalDatatype
+    * @param data The RDF datatype of the property 's subject 
+    */
+    public void setLiteralDatatype(String data)
+    {
+        this.literalDatatype=data;
+    }
+    
+    /**
+    * Retrieves the literalDatatype
+    * @return The RDF datatype of the property 's subject
+    */
+    public String getLiteralDatatype()
+    {
+        return this.literalDatatype;
+    }
+    
+   /**
+    * Defines the className
+    * @param data The set of the RDF classes related to the property
+    * The strings is the URIs of the RDF classes (keys).
+    */        
+    public void setClassName(Set<String[]> data)
+    {
+        this.classURI=data;
+    }
+        
     /**
     * Retrieves the className
     * @return The set of the RDF classes related to the property
     */
     public Set<String[]> getClassName()
     {
-        return className;
+        return this.classURI;
     }
     
+    public void addClassName(String[] data) {
+        if(this.classURI == null) {
+            this.classURI = new HashSet();
+        }
+        this.classURI.add(data);    
+    }   
+        
+    @Override
+    public String toString() {
+        String str = "[ URI: " + this.URI
+                + "\nProperty: "+ this.propertyName
+                + "\nDomain-Range: ";
+        for (String[] c: this.classURI) {
+            for (String s : c) {
+                str = str + s + "\t";
+            }
+            str = str + "\n";
+                   
+        }
+        str = str + "LiteralDatatype: " + this.literalDatatype + "\n]";
+        return(str);
+    }
 }

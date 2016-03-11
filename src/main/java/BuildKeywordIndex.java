@@ -20,63 +20,51 @@
  */
 
 import berkeleydbje.*;
-import java.io.File;
-import java.io.FileNotFoundException;
-//import java.nio.file.*;
-import java.util.Scanner;
-import java.util.*;
-import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.EntityCursor;
+import java.io.IOException;
+import org.keywordsearch.init.ConstantsSingleton;
 /**
  * This example class demonstrates the creation of the
  * Keyword Index using Oracle Berkeley DB Java Edition.
  * @author fil
+ * @author gkirtzou
  */
 public class BuildKeywordIndex {
-    public static void main(String args[]) {
-        String serverEndpoint = "http://snf-629975.vm.okeanos.grnet.gr:8190/ai4b/sparql";
-        String prefixes =   "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> " +
-                            "PREFIX d2r: <http://sites.wiwiss.fu-berlin.de/suhl/bizer/d2r-server/config.rdf#> " +
-                            "PREFIX owl: <http://www.w3.org/2002/07/owl#> " +
-                            "PREFIX map: <http://localhost:2020/resource/#> " +
-                            "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> " +
-                            "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> " +
-                            "PREFIX sym: <http://snf-629975.vm.okeanos.grnet.gr:8890/resource/sym/> ";
+    public static void main(String args[]) 
+            throws IOException {
+        ConstantsSingleton constants = ConstantsSingleton.getInstance();
+        DatabasePut edp = new DatabasePut(constants.bdbfiles_path);
+                
+        String ClassCsvFile = "/home/gkirtzou/Work/Projects/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFClasses.csv";
         
-        String vocabulary="sym";
-        DatabasePut edp = new DatabasePut("/home/fil/dbfilesAI4B4");
+        System.out.println("Named Graph <" + constants.named_graph +">");
         System.out.println("loading class db....");
-        edp.loadClassDb(prefixes, serverEndpoint);
+        edp.loadClassDb(ClassCsvFile);
         System.out.println("loading property db....");
-        edp.loadPropertyDb(vocabulary, prefixes, serverEndpoint);
-        System.out.println("loading literal db....");
-        edp.loadLiteralDb(vocabulary, prefixes, serverEndpoint, "/home/fil/Class-Aedges2.org");
-        System.out.println("loading caseinsensitive db....");
-        edp.loadClassCaseInsensitiveIndexes();
+        edp.loadPropertyDb(constants.query_prefix, constants.prefixes, constants.endpoint, constants.named_graph);
+       /* edp.loadLiteralDb(constants.query_prefix, constants.prefixes, constants.endpoint, "/home/fil/Class-Aedges2.org");
+        
         edp.loadPropertyCaseInsensitiveIndexes();
         edp.loadLiteralCaseInsensitiveIndexes();
+        */
+        System.out.println("loading caseinsensitive db....");
+        edp.loadClassCaseInsensitiveIndexes();
         edp.close();
-        /*System.out.println("reading class db....");
+        
+        /*
+        System.out.println("reading class db....");
         
         BerkeleyDBStorage db = null;
-        try{
-            db = new BerkeleyDBStorage("/home/fil/dbfilesAI4B");
-            EntityCursor<RdfClass> items = db.getClassCursor();
-
-            try {
-                for (RdfClass item : items) {
-                    System.out.println(item.getClassName());
-                    
-                }
-            } finally {
-                items.close();
-            }
+        db = new BerkeleyDBStorage(constants.bdbfiles_path);
+        // Show all RDF classes order by their Name
+        EntityCursor<RdfClass> items = db.getClassCursor();
+        for (RdfClass item : items) {
+            System.out.println(item);
         }
-        catch(IllegalArgumentException e){
-            System.out.println(e.getMessage());
-            System.exit(-1);
-        }
-    db.close();
-     */    
+        items.close();
+       // Show inverted Index for RDF classes
+       System.out.println(db.containsClassInvertedIndex("name"));
+       */
+     
     }
 }

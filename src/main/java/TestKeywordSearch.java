@@ -41,7 +41,7 @@ public class TestKeywordSearch {
         String bdbfiles_path = init.getConstants().bdbfiles_path;
                 
         // Keywords
-        String keywordInput = "MI0001364 NAME";
+        String keywordInput = "Name";
         boolean numTriplets = true;
         boolean averageSP = true;
         boolean longestSP = true;

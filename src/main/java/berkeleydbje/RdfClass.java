@@ -22,21 +22,66 @@ package berkeleydbje;
 
 import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
+import static com.sleepycat.persist.model.Relationship.MANY_TO_ONE;
+import com.sleepycat.persist.model.SecondaryKey;
+import java.util.Set;
+import java.util.HashSet;
+
 /**
  * This class describes the RDF class
  * as a Berkeley DB entity
  * @author fil
+ * @author gkirtzou
  */
 
 @Entity
 public class RdfClass {
-    
+       
+    /*
+     * The URI of the RDF Class as whole   
+     */
     @PrimaryKey
+    String URI;
+    
+    /* 
+     * The RDF class name
+     */
+    @SecondaryKey(relate=MANY_TO_ONE)
     private String className;
     
+    /*
+     * The prefix meet with the class name
+     */
+    private String prefix;
+    
+    /*
+     * Class constructor 
+     */ 
+    public RdfClass() {
+        this.URI = null;
+        this.className = null;
+        this.prefix = null;
+    }
+    
+    /**
+     * Defines the RDF URI
+     * @param URI The URI of the RDF class
+     */
+    public void setURI(String URI) {
+        this.URI = URI;
+    }
+    
+    /**
+     * Retrieves the RDF class URI
+     * @return The URI of the RDF class
+     */
+    public String getURI() {
+        return this.URI;
+    }   
+        
     /**
      * Defines the className
-     * @param data The name of the class
+     * @param data The class name extracted from the URI
      * 
      */
     public void setClassName(String data)
@@ -52,5 +97,31 @@ public class RdfClass {
     public String getClassName()
     {
         return className;
+    }
+    
+    /**
+     * Defines the prefix
+     * @param prefix The prefix extracted from the URI
+     */
+    public void setPrefix(String prefix) {
+        this.prefix = prefix;
+    }
+
+    /**
+     * Retrieves the prefix of the RDF class
+     * @return the prefix of the RDF class
+     */
+    public String getPrefix() {
+        return(this.prefix);
+    }
+   
+    
+    @Override
+    public String toString() {
+        String str = "[ URI:" + this.URI
+                + "\nClass:"+ this.className 
+                + "\tPrefixes: "+this.prefix 
+                + "]\n";
+        return(str);
     }
 }

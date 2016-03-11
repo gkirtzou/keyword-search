@@ -21,10 +21,15 @@
 package berkeleydbje;
 
 import com.hp.hpl.jena.query.QuerySolution;
+import com.hp.hpl.jena.rdf.model.RDFNode;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.Map;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import org.keywordsearch.sparqllib.*;
 
 
@@ -33,6 +38,7 @@ import org.keywordsearch.sparqllib.*;
  * by querying to a SPARQL endpoint. Afterwards this set of data 
  * is used to build the Keyword Index.
  * @author fil
+ * @author gkirtzou
  */
 public class KeywordIndex {
     
@@ -69,29 +75,56 @@ public class KeywordIndex {
      * Retrieves all the RDF classes from schema
      * @param prefixes The RDF prefixes
      * @param serverEndpoint The SPARQL endpoint
+     * @param namedGraph The named graph to explore. If null, explore the whole dataset
+     *                   of the endpoint.
      * @return The set of the RDF class names
      */
-    public Set<String> getRDFClassNames(String prefixes,String serverEndpoint)
+    public Set<String> getRDFClassNames(String prefixes,String serverEndpoint, String namedGraph)
     {  
-        String query = "SELECT distinct ?c WHERE {?s a ?c} ";
-        Set<String> classnames=new HashSet();
-        
+        // Set SPARQL query to get data related to class 
+        String query = null;
+        if (namedGraph != null) {
+            query = "SELECT distinct ?c FROM <" + namedGraph + "> WHERE {?s a ?c}"; 
+        }
+        else {
+            query = "SELECT distinct ?c WHERE {?s a ?c}"; 
+        }
+              
+        // Run SPARQL Query
         SPARQLQueryLib queryLib = new SPARQLQueryLib();
         queryLib.connect(serverEndpoint);
         QueryResponse qr = queryLib.sendQuery(prefixes + query);
         
-        //For each result, keep only the class name
+        // Get RDF class URIs
+        Set<String> classnames=new HashSet();
         for (QuerySolution s : qr.getResultSet()){
-         String str=s.get("?c").toString();
-            
-            int i=str.lastIndexOf("/")+1;
-            String className=str.substring(i);
-            if(className.contains("rdf-syntax")||className.contains("sameAs")||className.contains("rdf-schema"))
-                continue;
-            classnames.add(className);
+            String rdfClass=s.get("?c").toString().trim();
+            classnames.add(rdfClass);
         }
-           
+              
         return classnames;
+    }
+    
+    /**
+     * Retrieves all the RDF classes from schema
+     * @param csvFile
+     * @return 
+     * @throws java.io.FileNotFoundException
+     * @throws java.io.IOException
+     * @author gkirtzou
+     */
+    public Set<String> getRDFClassNames(String csvFile)
+            throws FileNotFoundException, IOException
+    {
+        Set<String> classnames=new HashSet();
+        BufferedReader br = null;
+        String line = "";
+        
+        br = new BufferedReader(new FileReader(csvFile));
+        while ((line = br.readLine()) != null) {
+            classnames.add(line.replace("\"", ""));
+        }
+        return (classnames);
     }
     
     /**
@@ -172,48 +205,81 @@ public class KeywordIndex {
     }
     
     /**
-     * Retrieves all the RDF properties from schema
+     * Retrieves all the RDF properties from schema and
+     * range/domain if available.
      * @param prefixes The RDF prefixes
      * @param serverEndpoint The SPARQL endpoint
+     * @param namedGraph The named graph to explore. If null, explore the whole dataset
+     *                   of the endpoint.
      * @return The set of the RDF properties names
      */
-    public Set<String> getRDFPropertiesNames(String prefixes,String serverEndpoint)
+    public Map<String, Set<String[]>> getRDFPropertiesNames(String prefixes,String serverEndpoint, String namedGraph)
     {  
-        //String query = "SELECT DISTINCT ?c ?p ?d WHERE {{ ?s a ?c. ?s ?p ?o} UNION {?s a ?c. ?s ?p ?o. ?o a ?d} } LIMIT 1"; 
-        String query = "SELECT DISTINCT ?p WHERE { ?s ?p ?o.}";
-        
+        // Set SPARQL query to retrieve RDF properties, as well as range/domain if available
+        String query = null;
+        if (namedGraph != null) {
+            query = "SELECT distinct ?p ?domain ?range FROM <" + namedGraph +
+                     "> WHERE {?p rdf:type <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property> "
+                     + "OPTIONAL { ?p rdfs:domain ?domain} " + "OPTIONAL {?p rdfs:range ?range}} LIMIT 20";
+        }
+        else {
+                query = "SELECT distinct ?p ?domain ?range " + 
+                     "WHERE {?p rdf:type <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property> "
+                     + "OPTIONAL { ?p rdfs:domain ?domain} " + "OPTIONAL {?p rdfs:range ?range}} LIMIT 20";
+        }
+         
+        System.out.println("Prefixes::" + prefixes);
+        System.out.println("Query::" + query);
+        // Run SPARQL query
         SPARQLQueryLib queryLib = new SPARQLQueryLib();
         queryLib.connect(serverEndpoint);
         QueryResponse qr = queryLib.sendQuery(prefixes + query);
-        Set<String> properties = new HashSet();
         
-        
+        // Extract RDF property and range/domain
+        Map<String, Set<String[]>> properties = new HashMap<String, Set<String[]>>(); 
         for (QuerySolution s : qr.getResultSet()){
-            String str1=s.get("?p").toString();
-            int i=str1.lastIndexOf("/")+1;
-            //String object=s.get("?o").toString();
-            //boolean isLiteral=s.get("?o").isLiteral();
-            String property=str1.substring(i);
-            //int classes;
-            if(property.contains("rdf-syntax")||property.contains("sameAs")||property.contains("rdf-schema"))
-                continue;
-                    //System.out.print(Arrays.toString(classNames));
-                    //System.out.print(classNames[0]);
-                
-                //System.out.print(Arrays.toString(classNames));
-                //newClassNames.add(classNames);
-                //System.out.print(newClassNames);
-            properties.add(property);
-            
-            //System.out.print(classNames);
-            //String str=s.get("?o").toString();
-            //boolean str1=s.get("?o").isLiteral();
+          //  System.out.println("Property:" + s.get("?p"));
+          //  System.out.println("Domain:" + s.get("?domain"));
+          //  System.out.println("Range:" + s.get("?range"));
+            String property=s.get("?p").toString().trim();
+            RDFNode r = s.get("?domain");
+            String domain=null;
+            if( r != null) {
+                domain = r.toString().trim();
+            }
+            String range=null;
+            r = s.get("?range");
+            if(r != null) {
+                range = r.toString().trim();
+            }            
             
             
+            if(properties.containsKey(property))
+            {
+                Set<String[]> newClassNames = new HashSet<String[]>();
+                newClassNames=properties.get(property);
+                String[] classNames=new String[2];
+                classNames[0]=domain;
+                classNames[1]=range;
+                //System.out.print(classNames);
+                newClassNames.add(classNames);
+                properties.put(property, newClassNames);
+            }
+            else
+            {
+                Set<String[]> newClassNames = new HashSet<String[]>();
+                String[] classNames=new String[2];
+                classNames[0]=domain;
+                classNames[1]=range;
+                //System.out.println("ClassNames::" + classNames[0] + "\t" + classNames[1] + "\n");
+                newClassNames.add(classNames);
+                properties.put(property, newClassNames);
+            }
         }
-           
         return properties;
     }
+    
+    
     
     /**
      * Retrieves the RDF properties connecting two entities.
@@ -384,4 +450,6 @@ public class KeywordIndex {
         return !qr.getResultSet().isEmpty();          
     }
     
+
+            
 }
