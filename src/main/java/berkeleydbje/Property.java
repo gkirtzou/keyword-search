@@ -155,7 +155,7 @@ public class Property {
         
     @Override
     public String toString() {
-        String str = "[ URI: " + this.URI
+        String str = "[URI: " + this.URI
                 + "\nProperty: "+ this.propertyName
                 + "\nDomain-Range: ";
         for (String[] c: this.classURI) {

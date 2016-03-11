@@ -35,60 +35,60 @@ import java.util.Set;
 @Entity
 public class ClassInvertedIndex {
     @PrimaryKey
-    private String classNameIndex;
+    private String className;
     private Set<String> classURIs;
     
     /**
-     * Defines the classNameIndex.
+     * Defines the className.
      * @param data The class name in the inverted index 
      */
-    public void setClassNameIndex(String data)
+    public void setClassName(String data)
     {
-        classNameIndex=data;
+        className=data;
     }
     
     /**
-     * Defines the classNames.
+     * Defines the classURIs.
      * @param data The set of referencing RDF classes 
      * in the keyword index. 
      */
-    public void setClassNames(Set<String> data)
+    public void setClassURIs(Set<String> data)
     {
         classURIs=data;
     }
     
      /**
-     * Defines the classNames.
+     * Expands the classURIs.
      * @param data An reference RDF classes 
      * to be added in the Term index. 
      * @author gkirtzou
      */
-    public void addClassNames(String data)
+    public void addClassURIs(String data)
     {
         classURIs.add(data);
     }
     /**
-     * Retrieves the classNames.
+     * Retrieves the classURIs.
      * @return The set of referencing RDF classes
      * in the keyword index.
      */
-    public Set<String> getClassNames()
+    public Set<String> getClassURIs()
     {
         return classURIs;
     }
     
     /**
-     * Retrieves the classNameIndex.
+     * Retrieves the className.
      * @return The class name in the inverted index.
      */
-    public String getClassNameIndex()
+    public String getClassName()
     {
-        return classNameIndex;
+        return className;
     }
     
     @Override
     public String toString() {
-        String str = "[ Class name:" + this.classNameIndex
+        String str = "[ Class name:" + this.className
                 + "\n Class References:\n"+ this.classURIs.toString()
                 + "]\n";
         return(str);

@@ -36,19 +36,20 @@ public class BuildKeywordIndex {
         DatabasePut edp = new DatabasePut(constants.bdbfiles_path);
                 
         String ClassCsvFile = "/home/gkirtzou/Work/Projects/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFClasses.csv";
+        String PropertiesCsvFile = "/home/gkirtzou/Work/Projects/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFProperties.csv";
         
         System.out.println("Named Graph <" + constants.named_graph +">");
         System.out.println("loading class db....");
         edp.loadClassDb(ClassCsvFile);
         System.out.println("loading property db....");
-        edp.loadPropertyDb(constants.query_prefix, constants.prefixes, constants.endpoint, constants.named_graph);
-       /* edp.loadLiteralDb(constants.query_prefix, constants.prefixes, constants.endpoint, "/home/fil/Class-Aedges2.org");
-        
-        edp.loadPropertyCaseInsensitiveIndexes();
+       // edp.loadPropertyDb(constants.query_prefix, constants.prefixes, constants.endpoint, constants.named_graph);
+         edp.loadPropertyDb(PropertiesCsvFile);
+       /* edp.loadLiteralDb(constants.query_prefix, constants.prefixes, constants.endpoint, "/home/fil/Class-Aedges2.org");     
         edp.loadLiteralCaseInsensitiveIndexes();
         */
         System.out.println("loading caseinsensitive db....");
         edp.loadClassCaseInsensitiveIndexes();
+        edp.loadPropertyCaseInsensitiveIndexes();
         edp.close();
         
         /*

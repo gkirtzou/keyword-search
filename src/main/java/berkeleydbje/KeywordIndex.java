@@ -30,6 +30,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
 import org.keywordsearch.sparqllib.*;
 
 
@@ -219,17 +220,15 @@ public class KeywordIndex {
         String query = null;
         if (namedGraph != null) {
             query = "SELECT distinct ?p ?domain ?range FROM <" + namedGraph +
-                     "> WHERE {?p rdf:type <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property> "
+                     "> WHERE {?s ?p ?p "
                      + "OPTIONAL { ?p rdfs:domain ?domain} " + "OPTIONAL {?p rdfs:range ?range}} LIMIT 20";
         }
         else {
                 query = "SELECT distinct ?p ?domain ?range " + 
-                     "WHERE {?p rdf:type <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property> "
+                     "WHERE {?s ?p ?o"
                      + "OPTIONAL { ?p rdfs:domain ?domain} " + "OPTIONAL {?p rdfs:range ?range}} LIMIT 20";
         }
          
-        System.out.println("Prefixes::" + prefixes);
-        System.out.println("Query::" + query);
         // Run SPARQL query
         SPARQLQueryLib queryLib = new SPARQLQueryLib();
         queryLib.connect(serverEndpoint);
@@ -238,9 +237,6 @@ public class KeywordIndex {
         // Extract RDF property and range/domain
         Map<String, Set<String[]>> properties = new HashMap<String, Set<String[]>>(); 
         for (QuerySolution s : qr.getResultSet()){
-          //  System.out.println("Property:" + s.get("?p"));
-          //  System.out.println("Domain:" + s.get("?domain"));
-          //  System.out.println("Range:" + s.get("?range"));
             String property=s.get("?p").toString().trim();
             RDFNode r = s.get("?domain");
             String domain=null;
@@ -253,11 +249,10 @@ public class KeywordIndex {
                 range = r.toString().trim();
             }            
             
-            
+            // Add the property to the result set
             if(properties.containsKey(property))
             {
-                Set<String[]> newClassNames = new HashSet<String[]>();
-                newClassNames=properties.get(property);
+                Set<String[]> newClassNames = properties.get(property);
                 String[] classNames=new String[2];
                 classNames[0]=domain;
                 classNames[1]=range;
@@ -267,11 +262,67 @@ public class KeywordIndex {
             }
             else
             {
-                Set<String[]> newClassNames = new HashSet<String[]>();
+                Set<String[]> newClassNames = new HashSet<>();
                 String[] classNames=new String[2];
                 classNames[0]=domain;
                 classNames[1]=range;
                 //System.out.println("ClassNames::" + classNames[0] + "\t" + classNames[1] + "\n");
+                newClassNames.add(classNames);
+                properties.put(property, newClassNames);
+            }
+        }
+        return properties;
+    }
+    
+    /**
+     * Retrieves all the RDF properties from schema and
+     * range/domain if available.
+     * @param csvFile
+     * @return The set of the RDF properties names
+     * @author gkirtzou 
+     */
+    public Map<String, Set<String[]>> getRDFPropertiesNames(String csvFile)
+            throws FileNotFoundException, IOException {
+        
+        Map<String, Set<String[]>> properties = new HashMap<String, Set<String[]>>(); 
+        BufferedReader br = null;
+        String line = "";
+        
+        br = new BufferedReader(new FileReader(csvFile));
+        while ((line = br.readLine()) != null) {
+            // Extract RDF property and range/domain if available
+            String[] splits = line.split(",");
+            String property = splits[0].replace("\"", "");
+            String domain=null;
+            String range=null;
+            if(splits.length == 3) {
+                if (!splits[1].equals("")) {
+                domain = splits[1].replace("\"", "");
+                }
+                if(!splits[2].equals("")) {
+                  range = splits[2].replace("\"", "");
+                }
+            }
+            else if (splits.length == 2 && !splits[1].equals("")) {
+                domain = splits[1].replace("\"", "");
+            }
+                        
+            // Add the property to the result set
+            if(properties.containsKey(property))
+            {
+                Set<String[]> newClassNames = properties.get(property);
+                String[] classNames=new String[2];
+                classNames[0]=domain;
+                classNames[1]=range;
+                newClassNames.add(classNames);
+                properties.put(property, newClassNames);
+            }
+            else
+            {
+                Set<String[]> newClassNames = new HashSet<>();
+                String[] classNames=new String[2];
+                classNames[0]=domain;
+                classNames[1]=range;
                 newClassNames.add(classNames);
                 properties.put(property, newClassNames);
             }

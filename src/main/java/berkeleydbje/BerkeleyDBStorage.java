@@ -146,14 +146,14 @@ public class BerkeleyDBStorage implements IStorageEngine{
     
     /**
      * Gets all RDF classes referenced to the given keyword 
-     * @param classNameIndex the class name to search for
+     * @param className the class name to search for
      * @return The set of matching classes
      * @throws DatabaseException 
      */
     @Override
-    public Set<String> getRefClasses(String classNameIndex) 
+    public Set<String> getRefClasses(String className) 
             throws DatabaseException{
-        return da.classInvertedIndexByName.get(classNameIndex).getClassNames();
+        return da.classInvertedIndexByName.get(className).getClassURIs();
     }
     
     /**
@@ -165,7 +165,7 @@ public class BerkeleyDBStorage implements IStorageEngine{
     @Override
     public Set<String> getRefProperties(String propertyIndex) 
             throws DatabaseException{
-        return da.propertyInvertedIndexByName.get(propertyIndex).getProperties();
+        return da.propertyInvertedIndexByName.get(propertyIndex).getPropertiesURIs();
     }
     
     /**

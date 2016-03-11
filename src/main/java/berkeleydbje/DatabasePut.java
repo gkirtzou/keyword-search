@@ -132,18 +132,22 @@ public class DatabasePut{
     
     /**
      * Inserts into the database the properties. 
+     * @param csvFile
      * @param vocabulary The given RDF vocabulary 
      * @param prefixes The specified prefixes
      * @param serverEndpoint The SPARQL endpoint
      * @param namedGraph The named graph to explore. If null, explore the whole dataset
      *                   of the endpoint.
      * @throws DatabaseException 
+     * @throws java.io.IOException 
      */
-    public void loadPropertyDb(String vocabulary,String prefixes,String serverEndpoint, String namedGraph)
-        throws DatabaseException {
+    //public void loadPropertyDb(String vocabulary,String prefixes,String serverEndpoint, String namedGraph)
+    public void loadPropertyDb(String csvFile)
+        throws DatabaseException, IOException {
 
         KeywordIndex ksearch=new KeywordIndex();
-        Map<String, Set<String[]>>  properties=ksearch.getRDFPropertiesNames(prefixes, serverEndpoint, namedGraph);
+       // Map<String, Set<String[]>>  properties=ksearch.getRDFPropertiesNames(prefixes, serverEndpoint, namedGraph);
+        Map<String, Set<String[]>>  properties=ksearch.getRDFPropertiesNames(csvFile);
         for (Map.Entry<String, Set<String[]>> property : properties.entrySet()) {
         
            // Split URI to prefix and name
@@ -154,80 +158,12 @@ public class DatabasePut{
            Property rdfProperty = new Property();
            rdfProperty.setURI(str);
            rdfProperty.setPropertyName(str.substring(i));
-           rdfProperty.setClassName(property.getValue());
-           
-           
+           rdfProperty.setClassName(property.getValue());           
            
            // Add RDF property object to term index
-           System.out.println(rdfProperty);
+           //System.out.println(rdfProperty);
            da.propertyIndex.put(rdfProperty);
-           
-                      
-            /*
-            EntityCursor<RdfClass> SubjectClass =
-                da.classByName.entities();
-            String Property=setIterator.next().toString();
-            //System.out.println("Property:"+property);
-            // For each pair of subject-object className find the entity-to-entity properties
-                      for(RdfClass subject:SubjectClass)
-                      {
-                          EntityCursor<RdfClass> ObjectClass =
-                          da.classByName.entities();
-                          for(RdfClass object:ObjectClass)
-                          {
-                          String Subject=subject.getClassName();
-                          String Object=object.getClassName();
-                          System.out.println("Object:"+Object);
-                          if(ksearch.isRDFEntityProperty(Subject,Property, Object,vocabulary,prefixes,serverEndpoint))
-                          {
-                              Property relationProperty=new Property();
-                              //System.out.println("!!!!!Subject:"+Subject+" Property:"+Property+" Object:"+Object);
-                              if(!da.propertyByName.contains(Property))
-                              {
-                                   Set<String[]> newClassNames = new HashSet<String[]>();
-                                   String[] classNames=new String[2];
-                                   classNames[0]=Subject;
-                                   classNames[1]=Object;
-                                   newClassNames.add(classNames);
-                                   Property newProperty=new Property();
-                                   newProperty.setPropertyName(Property);
-                                   newProperty.setClassName(newClassNames);
-                                   da.propertyByName.put(newProperty);
-                              }    
-                              else
-                              {
-                                  Set<String[]> newClassNames = new HashSet<String[]>();
-                                  newClassNames=da.propertyByName.get(Property).getClassName();
-                                  String[] classNames=new String[2];
-                                  classNames[0]=Subject;
-                                  classNames[1]=Object;
-                                  newClassNames.add(classNames);
-                                  Property newProperty=new Property();
-                                  newProperty.setPropertyName(Property);
-                                  newProperty.setClassName(newClassNames);
-                                  da.propertyByName.put(newProperty);
-                              }
-                          }
-                      }
-                      ObjectClass.close();
-            }
-            SubjectClass.close();
-            */
          }
-         /*
-         Map<String, Set<String[]>> propertiesWithSubject=ksearch.getRDFPropertiesWithClasses(prefixes,serverEndpoint);
-         for (Map.Entry<String, Set<String[]>> entry : propertiesWithSubject.entrySet())
-         {
-             // Load the missing entity-to-attribute properties
-             if(!da.propertyByName.contains(entry.getKey().toString()))
-             {
-                  Property newProperty=new Property();
-                  newProperty.setPropertyName(entry.getKey().toString());
-                  newProperty.setClassName(entry.getValue());
-                  da.propertyByName.put(newProperty);
-             }    
-         }
-         */   
     }
     
     /**
@@ -324,24 +260,22 @@ public class DatabasePut{
                     //System.out.println("Working on class " + curClass);
                     String classLowerCaseName=curClass.getClassName().toLowerCase();
                     
-                    if(!da.classInvertedIndexByName.contains(classLowerCaseName))
-                    {
+                    if(!da.classInvertedIndexByName.contains(classLowerCaseName))  {
                         // Create ClassInvertedIndex
                         ClassInvertedIndex classIndex= new ClassInvertedIndex();
                         // The lower case class name
-                        classIndex.setClassNameIndex(classLowerCaseName);
+                        classIndex.setClassName(classLowerCaseName);
                         // The reference to the current RDF Class
                         Set<String> newClasses = new HashSet<>();
                         newClasses.add(curClass.getURI());
-                        classIndex.setClassNames(newClasses);
+                        classIndex.setClassURIs(newClasses);
                         //System.out.println("Insert\n" + classIndex);
                         // Add the newly ClassInvertedIndex to the index
                         da.classInvertedIndexByName.put(classIndex);
                     }
-                    else
-                    {
+                    else {
                         ClassInvertedIndex classIndex=da.classInvertedIndexByName.get(classLowerCaseName);
-                        classIndex.addClassNames(curClass.getURI());
+                        classIndex.addClassURIs(curClass.getURI());
                         //System.out.println("In the index\n " + classIndex);
                         da.classInvertedIndexByName.put(classIndex);
                     }
@@ -354,7 +288,7 @@ public class DatabasePut{
      }
     
      
-      /**
+    /**
      * Inserts into the database the RDF properties
      * for the inverted keyword index. The inverted 
      * index refers to similar RDF properties of the
@@ -362,41 +296,43 @@ public class DatabasePut{
      * excluding special characters etc).
      * @throws DatabaseException 
      */
-    /*
-     public void loadPropertyCaseInsensitiveIndexes()
+    public void loadPropertyCaseInsensitiveIndexes()
         throws DatabaseException {
          
-          EntityCursor<Property> properties =
+        EntityCursor<Property> properties =
                 da.propertyByName.entities();
-         try {
-                for (Property property : properties) {
-                    Set<String> newProperties = new HashSet<String>();
-                    PropertyInvertedIndex propertyIndex= new PropertyInvertedIndex();
-                    String propertyName=property.getPropertyName();
-                    String propertyLowerCaseName=property.getPropertyName().toLowerCase();
+        try {
+            for (Property property : properties) {
+                    System.out.println("Working on property" + property);
+                    String propertyLowerCaseName= property.getPropertyName().toLowerCase();
+                    
                     if(!da.propertyInvertedIndexByName.contains(propertyLowerCaseName))
                     {
-                        newProperties.add(propertyName);
-                        propertyIndex.setPropertyIndex(propertyLowerCaseName);
-                        propertyIndex.setProperties(newProperties);
+                        // Create PropertyInvertedIndex
+                        PropertyInvertedIndex propertyIndex= new PropertyInvertedIndex();
+                        // The lower case property name
+                        propertyIndex.setPropertyName(propertyLowerCaseName);
+                        // The reference to the current RDF Class
+                        Set<String> newProperties = new HashSet<>();
+                        newProperties.add(property.getURI());
+                        propertyIndex.setPropertiesURIs(newProperties);
+                        System.out.println("Insert\n" + propertyIndex);
+                        // Add the newly ProperptyInvertedIndex to the index
                         da.propertyInvertedIndexByName.put(propertyIndex);
                     }
-                    else
-                    {
-                        propertyIndex=da.propertyInvertedIndexByName.get(propertyLowerCaseName);
-                        newProperties=propertyIndex.getProperties();
-                        newProperties.add(propertyName);
-                        propertyIndex.setProperties(newProperties);
+                    else {
+                        PropertyInvertedIndex propertyIndex=da.propertyInvertedIndexByName.get(propertyLowerCaseName);
+                        propertyIndex.addPropertiesURIs(property.getURI());
+                        System.out.println("In the index\n " + propertyIndex);
                         da.propertyInvertedIndexByName.put(propertyIndex);
                     }
-                    
-                }
-            } finally {
-                properties.close();
             }
+        } finally {
+                properties.close();
+        }
          
      }
-     */
+     
       /**
      * Inserts into the database the RDF literals
      * for the inverted keyword index. The inverted 

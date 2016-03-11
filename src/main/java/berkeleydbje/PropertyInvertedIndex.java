@@ -30,20 +30,21 @@ import java.util.Set;
  * keyword index(e.g. lower case letters, keywords
  * excluding special characters etc).
  * @author fil
+ * @author gkirtzou
  */
 @Entity
 public class PropertyInvertedIndex {
     @PrimaryKey
-    private String propertyIndex;
-    private Set<String> properties;
+    private String propertyName;
+    private Set<String> propertiesURIs;
     
     /**
      * Defines the propertyIndex
      * @param data The property name in the inverted index
      */
-    public void setPropertyIndex(String data)
+    public void setPropertyName(String data)
     {
-        propertyIndex=data;
+        propertyName=data;
     }
     
     /**
@@ -51,9 +52,9 @@ public class PropertyInvertedIndex {
      * @param data The set of referencing RDF properties
      * in the keyword index
      */
-    public void setProperties(Set<String> data)
+    public void setPropertiesURIs(Set<String> data)
     {
-        properties=data;
+        propertiesURIs=data;
     }
     
     /**
@@ -61,17 +62,36 @@ public class PropertyInvertedIndex {
      * @return The set of referencing RDF properties
      * in the keyword index
      */
-    public Set<String> getProperties()
+    public Set<String> getPropertiesURIs()
     {
-        return properties;
+        return propertiesURIs;
+    }
+    
+    /**
+     * Expands the propertiesURIs.
+     * @param data An reference RDF property 
+     * to be added in the inverted index. 
+     * @author gkirtzou
+     */
+    public void addPropertiesURIs(String data)
+    {
+        propertiesURIs.add(data);
     }
     
     /**
      * Retrieves the propertyIndex
      * @return The property name in the inverted index
      */
-    public String getPropertyIndex()
+    public String getPropertyName()
     {
-        return propertyIndex;
+        return propertyName;
+    }
+    
+    @Override
+    public String toString() {
+        String str = "[Property name:" + this.propertyName
+                + "\n Properties References:\n"+ this.propertiesURIs.toString()
+                + "]\n";
+        return(str);
     }
 }
