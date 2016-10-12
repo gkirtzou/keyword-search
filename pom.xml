@@ -264,6 +264,7 @@
 		<version>4.11</version>
 	</dependency>
     
+    <!--- Remove temporarily for debugging 
         <dependency>
 		<groupId>org.dllearner</groupId>
 		<artifactId>components-ext</artifactId>
@@ -295,6 +296,7 @@
 		    </exclusion>
 		</exclusions>
 	</dependency>  
+        -->
         <dependency>
 		<groupId>ifi.uzh</groupId>
 		<artifactId>simpack</artifactId>
@@ -309,12 +311,13 @@
 		<type>jar</type>
 		<scope>compile</scope>
 	</dependency>   
+            <!--- Remove temporarily for debugging 
                 <dependency>
                         <groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
 			<version>3.2-SNAPSHOT</version>
 		</dependency>
-		
+		-->
 		<dependency>
 			<groupId>org.apache.solr</groupId>
 			<artifactId>solr-solrj</artifactId>
@@ -476,11 +479,12 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.3.2</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                     <compilerArguments>
                         <endorseddirs>${endorsed.dir}</endorseddirs>
                     </compilerArguments>
+                    <showDeprecation>true</showDeprecation>
                 </configuration>
             </plugin>
             <plugin>

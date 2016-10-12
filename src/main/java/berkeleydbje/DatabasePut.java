@@ -142,12 +142,12 @@ public class DatabasePut{
      * @throws java.io.IOException 
      */
     //public void loadPropertyDb(String vocabulary,String prefixes,String serverEndpoint, String namedGraph)
-    public void loadPropertyDb(String csvFile)
+    public void loadPropertyDb(String csvFile, String vocabulary,String prefixes,String serverEndpoint, String namedGraph)
         throws DatabaseException, IOException {
 
         KeywordIndex ksearch=new KeywordIndex();
        // Map<String, Set<String[]>>  properties=ksearch.getRDFPropertiesNames(prefixes, serverEndpoint, namedGraph);
-        Map<String, Set<String[]>>  properties=ksearch.getRDFPropertiesNames(csvFile);
+        Map<String, Set<String[]>>  properties=ksearch.getRDFProperties(csvFile, serverEndpoint, prefixes, namedGraph);
         for (Map.Entry<String, Set<String[]>> property : properties.entrySet()) {
         
            // Split URI to prefix and name
@@ -158,10 +158,13 @@ public class DatabasePut{
            Property rdfProperty = new Property();
            rdfProperty.setURI(str);
            rdfProperty.setPropertyName(str.substring(i));
-           rdfProperty.setClassName(property.getValue());           
+           if (!property.getValue().isEmpty()) {
+            rdfProperty.setClassName(property.getValue());   
+           }
+           
            
            // Add RDF property object to term index
-           //System.out.println(rdfProperty);
+           System.out.println(rdfProperty);
            da.propertyIndex.put(rdfProperty);
          }
     }
@@ -303,7 +306,7 @@ public class DatabasePut{
                 da.propertyByName.entities();
         try {
             for (Property property : properties) {
-                    System.out.println("Working on property" + property);
+                    //System.out.println("Working on property" + property);
                     String propertyLowerCaseName= property.getPropertyName().toLowerCase();
                     
                     if(!da.propertyInvertedIndexByName.contains(propertyLowerCaseName))
@@ -316,14 +319,14 @@ public class DatabasePut{
                         Set<String> newProperties = new HashSet<>();
                         newProperties.add(property.getURI());
                         propertyIndex.setPropertiesURIs(newProperties);
-                        System.out.println("Insert\n" + propertyIndex);
+                        //System.out.println("Insert\n" + propertyIndex);
                         // Add the newly ProperptyInvertedIndex to the index
                         da.propertyInvertedIndexByName.put(propertyIndex);
                     }
                     else {
                         PropertyInvertedIndex propertyIndex=da.propertyInvertedIndexByName.get(propertyLowerCaseName);
                         propertyIndex.addPropertiesURIs(property.getURI());
-                        System.out.println("In the index\n " + propertyIndex);
+                        //System.out.println("In the index\n " + propertyIndex);
                         da.propertyInvertedIndexByName.put(propertyIndex);
                     }
             }

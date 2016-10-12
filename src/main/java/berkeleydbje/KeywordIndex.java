@@ -277,18 +277,17 @@ public class KeywordIndex {
     /**
      * Retrieves all the RDF properties from schema and
      * range/domain if available.
-     * @param csvFile
+     * @param csvFile the path to csvFile
      * @return The set of the RDF properties names
-     * @author gkirtzou 
      */
-    public Map<String, Set<String[]>> getRDFPropertiesNames(String csvFile)
+    // Last Modified by Gkirtzou 
+    public Map<String, Set<String[]>> getRDFProperties(String csvFile, String serverEndpoint, String prefixes, String namedGraph)
             throws FileNotFoundException, IOException {
         
-        Map<String, Set<String[]>> properties = new HashMap<String, Set<String[]>>(); 
-        BufferedReader br = null;
+        Map<String, Set<String[]>> properties = new HashMap<>(); 
         String line = "";
-        
-        br = new BufferedReader(new FileReader(csvFile));
+       
+        BufferedReader br = new BufferedReader(new FileReader(csvFile));
         while ((line = br.readLine()) != null) {
             // Extract RDF property and range/domain if available
             String[] splits = line.split(",");
@@ -305,31 +304,66 @@ public class KeywordIndex {
             }
             else if (splits.length == 2 && !splits[1].equals("")) {
                 domain = splits[1].replace("\"", "");
-            }
-                        
+            }             
+            
+            
             // Add the property to the result set
-            if(properties.containsKey(property))
-            {
-                Set<String[]> newClassNames = properties.get(property);
-                String[] classNames=new String[2];
-                classNames[0]=domain;
-                classNames[1]=range;
-                newClassNames.add(classNames);
-                properties.put(property, newClassNames);
+            boolean containsProperty = properties.containsKey(property);
+            Set<String[]> propertyDefinitions = null;
+            if(containsProperty) {
+                propertyDefinitions = properties.get(property);
             }
-            else
-            {
-                Set<String[]> newClassNames = new HashSet<>();
-                String[] classNames=new String[2];
-                classNames[0]=domain;
-                classNames[1]=range;
-                newClassNames.add(classNames);
-                properties.put(property, newClassNames);
+            else if(!containsProperty) {
+                propertyDefinitions =  new HashSet<>();                       
             }
+            if (domain != null && range != null) {
+                String[] names=new String[2];
+                names[0]=domain;
+                names[1]=range;
+                propertyDefinitions.add(names);                            
+            }
+            else if (domain != null && range == null) {
+                String[] names=new String[2];
+                names[0]=domain;
+                names[1]=null;
+                propertyDefinitions.add(names);        
+            }
+            else {
+                System.out.println("Run query for property " + property);
+                propertyDefinitions.addAll(this.getRDFPropertyEntitiesClasses(property, serverEndpoint, prefixes, namedGraph));
+            }
+            properties.put(property, propertyDefinitions);
         }
         return properties;
     }
-    
+     
+    public  Set<String[]> getRDFPropertyEntitiesClasses(String property, String serverEndpoint, String prefixes, String namedGraph) {
+        Set<String[]> propertyDefinitions = new HashSet<>(); 
+        
+        // Run query to retrieve domain, ranges of a property from data
+        SPARQLQueryLib queryLib = new SPARQLQueryLib();
+        queryLib.connect(serverEndpoint);
+        String query = "SELECT DISTINCT ?cD ?cR FROM <" + namedGraph 
+                        + "> WHERE { ?s <" + property 
+                        + "> ?o. ?s a ?cD. optional{?o a ?cR}} limit 10";
+        QueryResponse qr = queryLib.sendQuery(prefixes + query);
+        
+        // Extract results
+        for (QuerySolution s : qr.getResultSet()){
+            //System.out.println("QuerySolution " + s);
+            String[] names=new String[2];
+            names[0]= s.get("?cD").toString();
+            try {
+                names[1]= s.get("?cR").toString();
+            }
+            catch (NullPointerException e) {
+                names[1] = null;
+            } 
+            propertyDefinitions.add(names);    
+        }
+        //System.out.println(propertyDefinitions);
+        return propertyDefinitions;
+    }
     
     
     /**

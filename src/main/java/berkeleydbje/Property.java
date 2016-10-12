@@ -158,12 +158,16 @@ public class Property {
         String str = "[URI: " + this.URI
                 + "\nProperty: "+ this.propertyName
                 + "\nDomain-Range: ";
-        for (String[] c: this.classURI) {
-            for (String s : c) {
-                str = str + s + "\t";
-            }
-            str = str + "\n";
-                   
+        if (this.classURI  != null) {
+            for (String[] c: this.classURI) {
+                for (String s : c) {
+                    str = str + s + "\t";
+                }
+                str = str + "\n";
+            }   
+        }
+        else {
+            str =  str + "null\n";
         }
         str = str + "LiteralDatatype: " + this.literalDatatype + "\n]";
         return(str);

@@ -20,7 +20,7 @@
  */
 
 import berkeleydbje.*;
-import com.sleepycat.persist.EntityCursor;
+//import com.sleepycat.persist.EntityCursor;
 import java.io.IOException;
 import org.keywordsearch.init.ConstantsSingleton;
 /**
@@ -35,15 +35,15 @@ public class BuildKeywordIndex {
         ConstantsSingleton constants = ConstantsSingleton.getInstance();
         DatabasePut edp = new DatabasePut(constants.bdbfiles_path);
                 
-        String ClassCsvFile = "/home/gkirtzou/Work/Projects/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFClasses.csv";
-        String PropertiesCsvFile = "/home/gkirtzou/Work/Projects/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFProperties.csv";
+        String ClassCsvFile = "/home/gkirtzou/Dropbox/Projects/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFClasses.csv";
+        String PropertiesCsvFile = "/home/gkirtzou/Dropbox/Projects/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFProperties.csv";
         
         System.out.println("Named Graph <" + constants.named_graph +">");
         System.out.println("loading class db....");
         edp.loadClassDb(ClassCsvFile);
         System.out.println("loading property db....");
        // edp.loadPropertyDb(constants.query_prefix, constants.prefixes, constants.endpoint, constants.named_graph);
-         edp.loadPropertyDb(PropertiesCsvFile);
+         edp.loadPropertyDb(PropertiesCsvFile, constants.query_prefix, constants.prefixes, constants.endpoint, constants.named_graph);
        /* edp.loadLiteralDb(constants.query_prefix, constants.prefixes, constants.endpoint, "/home/fil/Class-Aedges2.org");     
         edp.loadLiteralCaseInsensitiveIndexes();
         */
@@ -51,7 +51,7 @@ public class BuildKeywordIndex {
         edp.loadClassCaseInsensitiveIndexes();
         edp.loadPropertyCaseInsensitiveIndexes();
         edp.close();
-        
+        /*addd commentto force compile*/
         /*
         System.out.println("reading class db....");
         
