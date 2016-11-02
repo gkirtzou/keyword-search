@@ -20,9 +20,10 @@
  */
 
 import berkeleydbje.*;
-//import com.sleepycat.persist.EntityCursor;
+import com.sleepycat.persist.EntityCursor;
 import java.io.IOException;
 import org.keywordsearch.init.ConstantsSingleton;
+
 /**
  * This example class demonstrates the creation of the
  * Keyword Index using Oracle Berkeley DB Java Edition.
@@ -31,41 +32,55 @@ import org.keywordsearch.init.ConstantsSingleton;
  */
 public class BuildKeywordIndex {
     public static void main(String args[]) 
-            throws IOException {
+            throws IOException, Exception {
         ConstantsSingleton constants = ConstantsSingleton.getInstance();
         DatabasePut edp = new DatabasePut(constants.bdbfiles_path);
                 
-        String ClassCsvFile = "/home/gkirtzou/Dropbox/Projects/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFClasses.csv";
-        String PropertiesCsvFile = "/home/gkirtzou/Dropbox/Projects/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFProperties.csv";
-        
+        String ClassCsvFile = "/home/gkirtzou/Dropbox/Work/Projects/LODGOV/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFClasses.csv";
+        String PropertiesCsvFile = "/home/gkirtzou/Dropbox/Work/Projects/LODGOV/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFProperties.csv";
+               
         System.out.println("Named Graph <" + constants.named_graph +">");
         System.out.println("loading class db....");
+        //edp.loadClassDb(constants.prefixes, constants.endpoint, constants.named_graph);
         edp.loadClassDb(ClassCsvFile);
         System.out.println("loading property db....");
-       // edp.loadPropertyDb(constants.query_prefix, constants.prefixes, constants.endpoint, constants.named_graph);
-         edp.loadPropertyDb(PropertiesCsvFile, constants.query_prefix, constants.prefixes, constants.endpoint, constants.named_graph);
-       /* edp.loadLiteralDb(constants.query_prefix, constants.prefixes, constants.endpoint, "/home/fil/Class-Aedges2.org");     
-        edp.loadLiteralCaseInsensitiveIndexes();
-        */
+        //edp.loadPropertyDb(constants.prefixes, constants.endpoint, constants.named_graph);
+        edp.loadPropertyDb(PropertiesCsvFile);
+        edp.loadLiteralDb(constants.prefixes, constants.endpoint, constants.named_graph);     
+             
+       
         System.out.println("loading caseinsensitive db....");
         edp.loadClassCaseInsensitiveIndexes();
-        edp.loadPropertyCaseInsensitiveIndexes();
+        edp.loadPropertyCaseInsensitiveIndexes();        
+        edp.loadLiteralCaseInsensitiveIndexes();
         edp.close();
-        /*addd commentto force compile*/
-        /*
-        System.out.println("reading class db....");
+    
         
-        BerkeleyDBStorage db = null;
-        db = new BerkeleyDBStorage(constants.bdbfiles_path);
-        // Show all RDF classes order by their Name
-        EntityCursor<RdfClass> items = db.getClassCursor();
-        for (RdfClass item : items) {
-            System.out.println(item);
+        System.out.println("reading literal db....");        
+        BerkeleyDBStorage db = new BerkeleyDBStorage(constants.bdbfiles_path);
+   /*     // Show all RDF classes order by their Name
+        EntityCursor<RdfClass> itemsC = db.getClassCursor();
+        for (RdfClass itemC : itemsC) {
+            System.out.println(itemC.toString());
         }
-        items.close();
-       // Show inverted Index for RDF classes
-       System.out.println(db.containsClassInvertedIndex("name"));
-       */
-     
+       
+        // Show all RDF properties order by their Name
+        EntityCursor<Property> itemsP = db.getPropertyCursor();
+        for (Property itemP : itemsP) {
+            System.out.println(itemP.toString());
+        }
+        
+        // Show all literal values order by their Name
+        EntityCursor<Literal> itemsL = db.getLiteralCursor();
+        for (Literal itemL : itemsL) {
+            System.out.println(itemL.toString());
+        }
+        */
+       // Test inverted index
+       System.out.println("B " + db.containsLiteralInvertedIndex("B"));
+       System.out.println("Switch " + db.containsLiteralInvertedIndex("switch"));
+       System.out.println("Valerie Whittingham " + db.containsLiteralInvertedIndex("ValeRie Whittingham"));
+       System.out.println("Person class "+ db.containsClassInvertedIndex("person"));
+       
     }
 }

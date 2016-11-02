@@ -26,17 +26,34 @@ import com.sleepycat.persist.model.PrimaryKey;
 //import com.sleepycat.persist.model.SecondaryKey;
 import java.util.*;
 
+
+
 /**
  * This class describes the RDF literal
  * as a Berkeley DB entity
  * @author fil
+ * @author gkirtzou
  */
 @Entity
 public class Literal {
     
     @PrimaryKey
-    private String literalName;
-    private Set<String> propertyWithClass;
+    private String literalValue;
+    // The quad is <language, datatype, property, class of subject>
+    // When language is equal to empty string "", means that no 
+    // language is available. 
+    // When datatype is equal to "null" string, means that no 
+    // datatype information is available. 
+    private Set<String[]> propertyWithClass;
+    
+    /*
+     * Class constructor 
+     */ 
+    public Literal() {
+        this.literalValue = null;
+        this.propertyWithClass = null;
+    }
+    
     
    /**
     * Defines the literalName
@@ -44,23 +61,35 @@ public class Literal {
     */
     public void setLiteralName(String data)
     {
-        literalName=data;
+        literalValue=data;
     }
     
    /**
     * Defines the propertyWithClass set
     * @param data The set of property-class pairs
     */
-    public void setPropertyWithClass(Set<String> data)
+    public void setPropertyWithClass(Set<String[]> data)
     {
         propertyWithClass=data;
     }
-
+    
+    /**
+     * Adds a new property-class pair to the propertyWithClass set
+     * @param data A pair of property-class 
+     */
+     public void addPropertyWithClass(String[] data)
+     {
+    	  if(this.propertyWithClass == null) {
+              this.propertyWithClass = new HashSet<String[]>();
+          }
+    	  propertyWithClass.add(data);
+     }
+     
    /**
     * Retrieves the propertyWithClass set
     * @return The set of property-class pairs
     */
-    public Set<String> getPropertyWihClass()
+    public Set<String[]> getPropertyWihClass()
     {
         return propertyWithClass;
     }
@@ -71,6 +100,25 @@ public class Literal {
     */
     public String getLiteralName()
     {
-        return literalName;
+        return literalValue;
+    }
+    
+    
+    @Override
+    public String toString() {
+        String str = "[Value: " + this.literalValue
+                + "\nProperty-Class pair: \n";
+        if (this.propertyWithClass  != null) {
+        	for (String[] c: this.propertyWithClass) {
+            	for (String cc :c) {
+            		str = str + cc + "\t";
+            	}
+                str = str + "\n";
+            }   
+        }
+        else {
+            str =  str + "null\n";
+        }
+        return(str);
     }
 }

@@ -30,8 +30,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.javatuples.Pair;
+
 
 /**
  *
@@ -128,9 +131,6 @@ public class KeywordFunctions  {
         //kwords = kwords.replaceAll("[/#$%^&+=\\[\\];,/{}|:<>?!@~&^]", "");
         kwords = kwords.replaceAll("[/#$%^&+=\\[\\];,/{}|<>?!@~&^]", "");
                
-        
-       
- 
         // Handle temporal operator AT - if present
         Pattern atPattern = Pattern.compile("(\\S+)\\s+AT\\s*:\\s*(\\S+)", Pattern.CASE_INSENSITIVE);
         Matcher atMatch = atPattern.matcher(kwords);     
@@ -143,8 +143,7 @@ public class KeywordFunctions  {
             atValue[0] = temp[0].replace("\"", "").trim(); // temporal property
             atValue[1] = temp[2].replace("\"", "").trim(); // value
             kwords = kwords.replace(atMatch.group(0), "");
-        }
-       
+        }     
         
          // Handle temporal operator BEFORE - if present
         Pattern beforePattern = Pattern.compile("(\\S+)\\s+BEFORE\\s*:\\s*(\\S+)", Pattern.CASE_INSENSITIVE);
@@ -162,8 +161,7 @@ public class KeywordFunctions  {
             beforeValue[1] = temp[2].replace("\"", "").trim(); // value
             kwords = kwords.replace(beforeMatch.group(0), "");
         }
-        
-        
+         
         // Handle temporal reserved keyword AFTER
         Pattern afterPattern = Pattern.compile("(\\S+)\\s+AFTER\\s*:\\s*(\\S+)", Pattern.CASE_INSENSITIVE);
         Matcher afterMatch = afterPattern.matcher(kwords);     
@@ -220,9 +218,9 @@ public class KeywordFunctions  {
      * literal and the value is a Set<property, class> of the related property and class. 
      * @return A HashMap with all the matches found for the keywords that the user inserted in the application.
      */
-    public HashMap getKeywordMatches(HashMap classNames, HashMap propertyNames, HashMap literalNames) {
+    public HashMap<String, HashMap<String, String>> getKeywordMatches(HashMap classNames, HashMap propertyNames, HashMap literalNames) {
         
-        HashMap keywordMatches = new HashMap();
+        HashMap<String, HashMap<String, String>> keywordMatches = new HashMap<String, HashMap<String, String>>();
         
         for (String kword : this.keywordsArray) {
             String currentKey = kword.trim();
@@ -240,7 +238,7 @@ public class KeywordFunctions  {
                 isLiteral=1;
             }
             String kwordProcessed="";
-            HashMap currentKeyword = new HashMap();
+            HashMap<String, String> currentKeyword = new HashMap<String, String>();
             if(isClass==0 && isProperty==0 && isLiteral==0){
                 kwordProcessed="No matches exist for this keyword";
                 out.println(kwordProcessed);
@@ -282,7 +280,418 @@ public class KeywordFunctions  {
         return keywordMatches;
     }
     
+ 
+    /**
+     * This function finds matches the user keywords to the dbStorage.
+     * @param dbStorage A BerkeleyDB structure containing all the necessary information from 
+     * the RDF schema.
+     * @param temporal_properties A list of the temporal properties that 
+     * @return A HashMap with all the matches found for the keywords that the user inserted in 
+     * the application. 
+     */
+    // last modified by @gkirtzou
+ /*   public HashMap<String, HashMap<String, String>> getKeywordMatches(BerkeleyDBStorage dbStorage){
+        
+        HashMap<String, HashMap<String, String>> keywordMatches = new HashMap<String, HashMap<String, String>>();
+        
+        // Matching process for each keyword input
+        for (String kword : this.keywordsArray) {
+            String currentKey = kword.trim();
+            // Ignore empty keyword
+            if (currentKey.equals(""))
+                continue;
+            String currentKeyLowerCase=currentKey.toLowerCase();
+            int isClass=0;
+            int isProperty=0;
+            int isLiteral=0;
+            
+            //Check if the current keyword is class name
+            if(dbStorage.containsClassInvertedIndex(currentKeyLowerCase)){
+                isClass=1;
+            }
+            if(dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)){
+                isProperty=1;
+            }
+            if(dbStorage.containsLiteralInvertedIndex(currentKeyLowerCase)){
+                isLiteral=1;
+            }
+        
+            System.out.println("isClass:" + isClass );
+            System.out.println("isProperty:" + isProperty );
+            System.out.println("isLiteral:" + isLiteral );
+            
+            if(isClass!=0 || isProperty!=0 || isLiteral!=0){
+            
+                HashMap<String, String> currentKeyword = new HashMap<String, String>();
+                int counter=0;
+                if(isClass==1){
+                    Set<String> refClasses=dbStorage.getRefClasses(currentKeyLowerCase);
+                    Iterator<String> setIterator=refClasses.iterator();
+                    while(setIterator.hasNext())
+                    {
+                        String refClass=setIterator.next();
+                        System.out.println("Class ref::" + refClass);
+                        currentKeyword.put("C"+ counter + "\t" + refClass, "");
+                        counter++;
+                    }
+                }   
+                if(isProperty==1){
+                    Set<String> refProperties=dbStorage.getRefProperties(currentKeyLowerCase);
+                    Iterator<String> setIterator=refProperties.iterator();
+                    while(setIterator.hasNext())
+                    {
+                        String refProperty=setIterator.next();
+                        System.out.println("Property ref::" + refProperty);
+                        /////
+                        // Check if property is literal one
+                        Set<String[]> propsTemp= dbStorage.getDetailsLiteralPropertyByURI(refProperty);               
+                        if(propsTemp != null) {
+                        
+	                        for (String[] s : propsTemp) {
+	                        	assert(s.length != 2);	                        	
+	                            String propDetails1 = "L"+counter+"\t"+refProperty; //Old P
+	                            String propDetails2 = s[0]+"\t"+s[1];                            
+	                            System.out.println(propDetails1 + "\t" + propDetails2);
+	                            currentKeyword.put(propDetails1, propDetails2);
+	                            counter++;
+	                        }
+                        }
+                        ////
+                        // Check if property is an inter-entities one
+                        propsTemp= dbStorage.getDetailsEntityPropertyByURI(refProperty);
+                        if(propsTemp != null) {
+	                        for (String[] s : propsTemp) {
+	                        	assert(s.length != 2);	                       	   
+	                            String propDetails1 = "E"+counter+"\t"+refProperty; //OLD E
+	                            String propDetails2 = s[0]+" "+s[1];
+	                            System.out.println(propDetails1 + "\t" + propDetails2);
+	                            currentKeyword.put(propDetails1, propDetails2);
+	                            counter++;
+	                        }
+                        }
+                    }
+                } 
+                if(isLiteral==1){
+                    Set<String> refLiterals=dbStorage.getRefLiterals(currentKeyLowerCase);
+                    Iterator<String> setIterator=refLiterals.iterator();
+                    while(setIterator.hasNext())
+                    {
+                        String refLiteral=setIterator.next();
+                		System.out.println("Literal ref :: " + refLiteral);
+                        Set<String[]> LiteralsTemp= dbStorage.getDetailsLiteral(refLiteral);
+                        if(LiteralsTemp != null) {
+	                        for (String[] s : LiteralsTemp) {
+	                        	// The quad is <language, datatype, property, class of subject> 
+	                        	assert(s.length != 4);
+	                        	String litDetails1="V"+counter+"\t"+refLiteral; //Old L
+	                        	String litDetails2= s[0]+"\t"+s[1]+ "\t" + s[2]+"\t"+s[3];
+	                        	
+	                        	System.out.println(litDetails1 + "\t" + litDetails2);
+	                        	currentKeyword.put(litDetails1, litDetails2);
+	                        	counter++;
+	                        	
+	                            
+	                        }
+                        }
+                    }
+                } 
+                keywordMatches.put(currentKey, currentKeyword);     
+            }
+
+        }
+  /*      
+        //Process keywords bind with temporal operators
+        if (this.at) {
+            System.out.println("Within processing at operator");
+            String currentKeyLowerCase = this.atValue[0].toLowerCase();
+            if (dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)) {
+                HashMap<String, String> currentKeyword = new HashMap<String, String>();
+                int counter = 0;
+                Set<String> refProperties = dbStorage.getRefProperties(currentKeyLowerCase);
+                Iterator<String> setIterator = refProperties.iterator();                
+                while (setIterator.hasNext()) {                    
+                    String refProperty = setIterator.next().toString();
+                    Set<String[]> propsTemp = dbStorage.getProperty(refProperty);
+                    for (String[] s : propsTemp) {                   
+                        String propDetails1 = "";
+                        String propDetails2 = "";                                             
+                        if (s.length == 1) {
+                           propDetails2 = "LE" + counter + ":" + this.atValue[1];
+                           propDetails1 = "prop:" + refProperty + ",class:" + s[0];
+                        }
+                        currentKeyword.put(propDetails2, propDetails1);
+                        counter++;
+                    }
+                }
+                keywordMatches.put(this.atValue[1], currentKeyword);
+            }            
+        }
+        if (this.before) {
+             System.out.println("Within processing before operator");
+            String currentKeyLowerCase = this.beforeValue[0].toLowerCase();
+            if (dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)) {
+                HashMap<String, String> currentKeyword = new HashMap<String, String>();
+                int counter = 0;
+                Set<String> refProperties = dbStorage.getRefProperties(currentKeyLowerCase);
+                Iterator<String> setIterator = refProperties.iterator();                
+                while (setIterator.hasNext()) {                    
+                    String refProperty = setIterator.next().toString();
+                    Set<String[]> propsTemp = dbStorage.getProperty(refProperty);
+                    for (String[] s : propsTemp) {                   
+                        String propDetails1 = "";
+                        String propDetails2 = "";                                             
+                        if (s.length == 1) {
+                           propDetails2 = "LB" + counter + ":" + this.beforeValue[1];
+                           propDetails1 = "prop:" + refProperty + ",class:" + s[0];
+                        }
+                        currentKeyword.put(propDetails2, propDetails1);
+                        counter++;
+                    }
+                }
+                keywordMatches.put(this.beforeValue[1], currentKeyword);
+            }            
+        }
+        if (this.after) {
+             System.out.println("Within processing after operator");
+            String currentKeyLowerCase = this.afterValue[0].toLowerCase();
+            if (dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)) {
+                HashMap<String, String> currentKeyword = new HashMap<String, String>();
+                int counter = 0;
+                Set<String> refProperties = dbStorage.getRefProperties(currentKeyLowerCase);
+                Iterator<String> setIterator = refProperties.iterator();                
+                while (setIterator.hasNext()) {                    
+                    String refProperty = setIterator.next().toString();
+                    Set<String[]> propsTemp = dbStorage.getProperty(refProperty);
+                    for (String[] s : propsTemp) {                   
+                        String propDetails1 = "";
+                        String propDetails2 = "";                                             
+                        if (s.length == 1) {
+                           propDetails2 = "LA" + counter + ":" + this.afterValue[1];
+                           propDetails1 = "prop:" + refProperty + ",class:" + s[0];
+                        }
+                        currentKeyword.put(propDetails2, propDetails1);
+                        counter++;
+                    }
+                }                  
+                keywordMatches.put(this.afterValue[1], currentKeyword);
+                
+            }            
+        }*/
+      //  return keywordMatches;
+  //  }
     
+   
+    
+    /**
+     * This function finds matches the user keywords to the dbStorage.
+     * @param dbStorage A BerkeleyDB structure containing all the necessary information from 
+     * the RDF schema.
+     * @param temporal_properties A list of the temporal properties that 
+     * @return A HashMap with all the matches found for the keywords that the user inserted in 
+     * the application. 
+     */
+    // last modified by @gkirtzou
+    // *** WORKING ON THIS*****
+    public HashMap<String, Vector<KeywordMatch>> getKeywordMatches(BerkeleyDBStorage dbStorage){
+        
+        HashMap<String, Vector<KeywordMatch>> keywordMatches = new HashMap<String, Vector<KeywordMatch>>();
+        
+        // Matching process for each keyword input
+        for (String kword : this.keywordsArray) {
+            String currentKeyword = kword.trim();
+            // Ignore empty keyword
+            if (currentKeyword.equals(""))
+                continue;            
+            int isClass=0;
+            int isProperty=0;
+            int isLiteral=0;
+            
+            //Check if the current keyword is class name
+            if(dbStorage.containsClassInvertedIndex(currentKeyword)){
+                isClass=1;
+            }
+            if(dbStorage.containsPropertyInvertedIndex(currentKeyword)){
+                isProperty=1;
+            }
+            if(dbStorage.containsLiteralInvertedIndex(currentKeyword)){
+                isLiteral=1;
+            }
+        
+            System.out.println("isClass:" + isClass );
+            System.out.println("isProperty:" + isProperty );
+            System.out.println("isLiteral:" + isLiteral );
+            
+            if(isClass!=0 || isProperty!=0 || isLiteral!=0){
+            
+                Vector<KeywordMatch> currentKeywordMatches = new Vector<KeywordMatch>();
+                int counter=0;
+                if(isClass==1){
+                	
+                    Set<String> refClasses=dbStorage.getRefClasses(currentKeyword);
+                    Iterator<String> setIterator=refClasses.iterator();
+                    while(setIterator.hasNext())
+                    {
+                    	
+                        String refClass=setIterator.next();
+                        System.out.println("Class ref::" + refClass);
+                      //  currentKeywordMatches = "C"+ counter + "\t" + refClass;
+                    	MatchRdfClass classMatch= new MatchRdfClass(refClass);
+                    	currentKeywordMatches.add(classMatch); 
+                        counter++;
+                    }
+                }   
+                if(isProperty==1){
+                    Set<String> refProperties=dbStorage.getRefProperties(currentKeyword);
+                    Iterator<String> setIterator=refProperties.iterator();
+                    while(setIterator.hasNext())
+                    {
+                        String refProperty=setIterator.next();
+                        System.out.println("Property ref::" + refProperty);
+                        /////
+                        // Check if property is literal one
+                        Set<String[]> propsTemp= dbStorage.getDetailsLiteralPropertyByURI(refProperty);               
+                        if(propsTemp != null) {
+                        
+	                        for (String[] s : propsTemp) {
+	                        	assert(s.length != 2);	                        	
+	                            String propDetails1 = "L"+counter+"\t"+refProperty; //Old P
+	                            String propDetails2 = s[0]+"\t"+s[1];                            
+	                            System.out.println(propDetails1 + "\t" + propDetails2);
+	                          //  currentKeywordMatches.put(propDetails1, propDetails2);       
+	                        	MatchPropertyLiteral propMatch= new MatchPropertyLiteral(refProperty, s[0], s[1]);
+	                        	currentKeywordMatches.add(propMatch); 
+	                            counter++;
+	                        }
+                        }
+                        ////
+                        // Check if property is an inter-entities one
+                        propsTemp= dbStorage.getDetailsEntityPropertyByURI(refProperty);
+                        if(propsTemp != null) {
+	                        for (String[] s : propsTemp) {
+	                        	assert(s.length != 2);	                       	   
+	                            String propDetails1 = "E"+counter+"\t"+refProperty; //OLD E
+	                            String propDetails2 = s[0]+" "+s[1];
+	                            System.out.println(propDetails1 + "\t" + propDetails2);
+	                            //currentKeywordMatches.put(propDetails1, propDetails2);
+	                        	MatchPropertyClass propMatch= new MatchPropertyClass(refProperty, s[0], s[1]);
+	                        	currentKeywordMatches.add(propMatch); 
+	                            counter++;
+	                        }
+                        }
+                    }
+                } 
+                if(isLiteral==1){
+                    Set<String> refLiterals=dbStorage.getRefLiterals(currentKeyword);
+                    Iterator<String> setIterator=refLiterals.iterator();
+                    while(setIterator.hasNext())
+                    {
+                        String refLiteral=setIterator.next();
+                		System.out.println("Literal ref :: " + refLiteral);
+                        Set<String[]> LiteralsTemp= dbStorage.getDetailsLiteral(refLiteral);
+                        if(LiteralsTemp != null) {
+	                        for (String[] s : LiteralsTemp) {
+	                        	// The quad is <language, datatype, property, class of subject> 
+	                        	assert(s.length != 4);
+	                        	String litDetails1="V"+counter+"\t"+refLiteral; //Old L
+	                        	String litDetails2= s[0]+"\t"+s[1]+ "\t" + s[2]+"\t"+s[3];
+	                        	
+	                        	System.out.println(litDetails1 + "\t" + litDetails2);
+	                        	//currentKeywordMatches.put(litDetails1, litDetails2);
+	                        	MatchLiteral litMatch= new MatchLiteral(refLiteral, s[0], s[1], s[2], s[3]);
+	                        	currentKeywordMatches.add(litMatch); 
+	                        	counter++;
+	                        	
+	                            
+	                        }
+                        }
+                    }
+                } 
+                keywordMatches.put(currentKeyword, currentKeywordMatches);     
+            }
+
+        }
+  /*      
+        //Process keywords bind with temporal operators
+        if (this.at) {
+            System.out.println("Within processing at operator");
+            String currentKeyLowerCase = this.atValue[0].toLowerCase();
+            if (dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)) {
+                HashMap<String, String> currentKeyword = new HashMap<String, String>();
+                int counter = 0;
+                Set<String> refProperties = dbStorage.getRefProperties(currentKeyLowerCase);
+                Iterator<String> setIterator = refProperties.iterator();                
+                while (setIterator.hasNext()) {                    
+                    String refProperty = setIterator.next().toString();
+                    Set<String[]> propsTemp = dbStorage.getProperty(refProperty);
+                    for (String[] s : propsTemp) {                   
+                        String propDetails1 = "";
+                        String propDetails2 = "";                                             
+                        if (s.length == 1) {
+                           propDetails2 = "LE" + counter + ":" + this.atValue[1];
+                           propDetails1 = "prop:" + refProperty + ",class:" + s[0];
+                        }
+                        currentKeyword.put(propDetails2, propDetails1);
+                        counter++;
+                    }
+                }
+                keywordMatches.put(this.atValue[1], currentKeyword);
+            }            
+        }
+        if (this.before) {
+             System.out.println("Within processing before operator");
+            String currentKeyLowerCase = this.beforeValue[0].toLowerCase();
+            if (dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)) {
+                HashMap<String, String> currentKeyword = new HashMap<String, String>();
+                int counter = 0;
+                Set<String> refProperties = dbStorage.getRefProperties(currentKeyLowerCase);
+                Iterator<String> setIterator = refProperties.iterator();                
+                while (setIterator.hasNext()) {                    
+                    String refProperty = setIterator.next().toString();
+                    Set<String[]> propsTemp = dbStorage.getProperty(refProperty);
+                    for (String[] s : propsTemp) {                   
+                        String propDetails1 = "";
+                        String propDetails2 = "";                                             
+                        if (s.length == 1) {
+                           propDetails2 = "LB" + counter + ":" + this.beforeValue[1];
+                           propDetails1 = "prop:" + refProperty + ",class:" + s[0];
+                        }
+                        currentKeyword.put(propDetails2, propDetails1);
+                        counter++;
+                    }
+                }
+                keywordMatches.put(this.beforeValue[1], currentKeyword);
+            }            
+        }
+        if (this.after) {
+             System.out.println("Within processing after operator");
+            String currentKeyLowerCase = this.afterValue[0].toLowerCase();
+            if (dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)) {
+                HashMap<String, String> currentKeyword = new HashMap<String, String>();
+                int counter = 0;
+                Set<String> refProperties = dbStorage.getRefProperties(currentKeyLowerCase);
+                Iterator<String> setIterator = refProperties.iterator();                
+                while (setIterator.hasNext()) {                    
+                    String refProperty = setIterator.next().toString();
+                    Set<String[]> propsTemp = dbStorage.getProperty(refProperty);
+                    for (String[] s : propsTemp) {                   
+                        String propDetails1 = "";
+                        String propDetails2 = "";                                             
+                        if (s.length == 1) {
+                           propDetails2 = "LA" + counter + ":" + this.afterValue[1];
+                           propDetails1 = "prop:" + refProperty + ",class:" + s[0];
+                        }
+                        currentKeyword.put(propDetails2, propDetails1);
+                        counter++;
+                    }
+                }                  
+                keywordMatches.put(this.afterValue[1], currentKeyword);
+                
+            }            
+        }*/
+        return keywordMatches;
+    }
+    
+   
     
     /**
      * In this function all possible combinations among the keyword matches
@@ -390,173 +799,5 @@ public class KeywordFunctions  {
         return combinationsPairs;
     } 
     
-    /**
-     * This function finds matches the user keywords to the dbStorage.
-     * @param dbStorage A BerkeleyDB structure containing all the necessary information from 
-     * the RDF schema.
-     * @param temporal_properties A list of the temporal properties that 
-     * @return A HashMap with all the matches found for the keywords that the user inserted in 
-     * the application. 
-     */
-    public HashMap getKeywordMatches(BerkeleyDBStorage dbStorage){
-        
-        HashMap keywordMatches = new HashMap();
-        
-        // Process keywords
-        for (String kword : this.keywordsArray) {
-            String currentKey = kword.trim();
-            // Ignore empty keyword
-            if (currentKey.equals(""))
-                continue;
-            String currentKeyLowerCase=currentKey.toLowerCase();
-            int isClass=0;
-            int isProperty=0;
-            int isLiteral=0;
-            //Check if the current keyword is class name
-            if(dbStorage.containsClassInvertedIndex(currentKeyLowerCase)){
-                isClass=1;
-            }
-            if(dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)){
-                isProperty=1;
-            }
-         /*   if(dbStorage.containsLiteralInvertedIndex(currentKeyLowerCase)){
-                isLiteral=1;
-            }
-        */    
-            if(isClass!=0 || isProperty!=0 || isLiteral!=0){
-            
-                HashMap currentKeyword = new HashMap();
-                int counter=0;
-                if(isClass==1){
-                    Set<String> refClasses=dbStorage.getRefClasses(currentKeyLowerCase);
-                    Iterator setIterator=refClasses.iterator();
-                    while(setIterator.hasNext())
-                    {
-                        String refClassName=setIterator.next().toString();
-                        currentKeyword.put("C:"+refClassName, "");
-                    }
-                }   
-                if(isProperty==1){
-                    Set<String> refProperties=dbStorage.getRefProperties(currentKeyLowerCase);
-                    Iterator setIterator=refProperties.iterator();
-                    while(setIterator.hasNext())
-                    {
-                        String refProperty=setIterator.next().toString();
-                        Set<String[]> propsTemp= dbStorage.getProperty(refProperty);
-                        for (String[] s : propsTemp) {
-                            String propDetails1="";
-                            String propDetails2="";
-                            if(s.length==1){
-                                propDetails1 = s[0];
-                                propDetails2 = "P"+counter+":"+refProperty;
-                            }
-                            else{
-                                propDetails1 = s[0]+":"+s[1];
-                                propDetails2 = "E"+counter+":"+refProperty;
-                            }
-                            currentKeyword.put(propDetails2, propDetails1);
-                            counter++;
-                        }
-                    }
-                } 
-                if(isLiteral==1){
-                    Set<String> refLiterals=dbStorage.getRefLiterals(currentKeyLowerCase);
-                    Iterator setIterator=refLiterals.iterator();
-                    while(setIterator.hasNext())
-                    {
-                        String refLiteral=setIterator.next().toString();
-                        Set<String> LiteralsTemp=(Set<String>)dbStorage.getLiteral(refLiteral);
-                        for (String s : LiteralsTemp) {
-                            currentKeyword.put("LE"+counter+":"+refLiteral, s);
-                            counter++;
-                            
-                        }
-                    }
-                } 
-                keywordMatches.put(currentKey, currentKeyword);     
-            }
-
-        }
-        
-        //Process keywords bind with temporal operators
-        if (this.at) {
-            System.out.println("Within processing at operator");
-            String currentKeyLowerCase = this.atValue[0].toLowerCase();
-            if (dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)) {
-                HashMap currentKeyword = new HashMap();
-                int counter = 0;
-                Set<String> refProperties = dbStorage.getRefProperties(currentKeyLowerCase);
-                Iterator setIterator = refProperties.iterator();                
-                while (setIterator.hasNext()) {                    
-                    String refProperty = setIterator.next().toString();
-                    Set<String[]> propsTemp = dbStorage.getProperty(refProperty);
-                    for (String[] s : propsTemp) {                   
-                        String propDetails1 = "";
-                        String propDetails2 = "";                                             
-                        if (s.length == 1) {
-                           propDetails2 = "LE" + counter + ":" + this.atValue[1];
-                           propDetails1 = "prop:" + refProperty + ",class:" + s[0];
-                        }
-                        currentKeyword.put(propDetails2, propDetails1);
-                        counter++;
-                    }
-                }
-                keywordMatches.put(this.atValue[1], currentKeyword);
-            }            
-        }
-        if (this.before) {
-             System.out.println("Within processing before operator");
-            String currentKeyLowerCase = this.beforeValue[0].toLowerCase();
-            if (dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)) {
-                HashMap currentKeyword = new HashMap();
-                int counter = 0;
-                Set<String> refProperties = dbStorage.getRefProperties(currentKeyLowerCase);
-                Iterator setIterator = refProperties.iterator();                
-                while (setIterator.hasNext()) {                    
-                    String refProperty = setIterator.next().toString();
-                    Set<String[]> propsTemp = dbStorage.getProperty(refProperty);
-                    for (String[] s : propsTemp) {                   
-                        String propDetails1 = "";
-                        String propDetails2 = "";                                             
-                        if (s.length == 1) {
-                           propDetails2 = "LB" + counter + ":" + this.beforeValue[1];
-                           propDetails1 = "prop:" + refProperty + ",class:" + s[0];
-                        }
-                        currentKeyword.put(propDetails2, propDetails1);
-                        counter++;
-                    }
-                }
-                keywordMatches.put(this.beforeValue[1], currentKeyword);
-            }            
-        }
-        if (this.after) {
-             System.out.println("Within processing after operator");
-            String currentKeyLowerCase = this.afterValue[0].toLowerCase();
-            if (dbStorage.containsPropertyInvertedIndex(currentKeyLowerCase)) {
-                HashMap currentKeyword = new HashMap();
-                int counter = 0;
-                Set<String> refProperties = dbStorage.getRefProperties(currentKeyLowerCase);
-                Iterator setIterator = refProperties.iterator();                
-                while (setIterator.hasNext()) {                    
-                    String refProperty = setIterator.next().toString();
-                    Set<String[]> propsTemp = dbStorage.getProperty(refProperty);
-                    for (String[] s : propsTemp) {                   
-                        String propDetails1 = "";
-                        String propDetails2 = "";                                             
-                        if (s.length == 1) {
-                           propDetails2 = "LA" + counter + ":" + this.afterValue[1];
-                           propDetails1 = "prop:" + refProperty + ",class:" + s[0];
-                        }
-                        currentKeyword.put(propDetails2, propDetails1);
-                        counter++;
-                    }
-                }                  
-                keywordMatches.put(this.afterValue[1], currentKeyword);
-                
-            }            
-        }
-        return keywordMatches;
-    }
-    
-    
+  
 }

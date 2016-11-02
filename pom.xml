@@ -39,6 +39,14 @@
             <artifactId>sparql2nl</artifactId>
             <version>1</version>
         </dependency>    -->  <!-- we will fix this dont worry... -->
+        <!-- Added by @gkirtzou for refactoring KeywordToSPARQL class -->
+        <dependency>
+	        <groupId>org.javatuples</groupId>
+	        <artifactId>javatuples</artifactId>
+	        <version>1.2</version>
+	        <scope>compile</scope>
+	    </dependency>
+     
         <dependency>
             <groupId>javax</groupId>
             <artifactId>javaee-web-api</artifactId>

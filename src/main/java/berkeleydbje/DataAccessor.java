@@ -20,7 +20,6 @@
  */
 package berkeleydbje;
 
-import java.io.File;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.EntityStore;
 import com.sleepycat.persist.PrimaryIndex;
@@ -58,13 +57,13 @@ public class DataAccessor {
             propertyIndex, String.class, "propertyName");
         propertyInvertedIndexByName = store.getPrimaryIndex(
             String.class, PropertyInvertedIndex.class);
-     /*   literalByName = store.getPrimaryIndex(
-            String.class, Literal.class);
         
-
+        // Literal Values (string)
+        literalByName = store.getPrimaryIndex(
+            String.class, Literal.class);
         literalInvertedIndexByName = store.getPrimaryIndex(
-            String.class, LiteralInvertedIndex.class);*/
-        }
+            String.class, LiteralInvertedIndex.class);
+    }
     
     // Inventory Accessors
     // RDF Class

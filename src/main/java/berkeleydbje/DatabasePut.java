@@ -21,13 +21,12 @@
 package berkeleydbje;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-//import java.nio.file.*;
-import java.util.Scanner;
 import java.util.*;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.persist.EntityCursor;
 import java.io.IOException;
+
+
 
 /**
  * This class creates a BerkeleyDB data store for
@@ -78,11 +77,12 @@ public class DatabasePut{
      *                   of the endpoint.
      * @throws DatabaseException 
      */
+    // Last Modified by Gkirtzou
     public void loadClassDb(String prefixes, String serverEndpoint, String namedGraph) 
         throws DatabaseException {
 
             KeywordIndex ksearch=new KeywordIndex();
-            Set<String> classNames=ksearch.getRDFClassNames(prefixes, serverEndpoint, namedGraph);
+            Set<String> classNames=ksearch.getRDFClasses(prefixes, serverEndpoint, namedGraph);
             Iterator<String> setIterator = classNames.iterator();
             while (setIterator.hasNext())
             {
@@ -95,7 +95,7 @@ public class DatabasePut{
                 rdfClass.setClassName(str.substring(i));
                 rdfClass.setPrefix(str.substring(0, i));
                 rdfClass.setURI(str);
-                //System.out.println(rdfClass);
+                System.out.println(rdfClass);
                 da.classIndex.put(rdfClass);
             }
             
@@ -108,11 +108,12 @@ public class DatabasePut{
      * @throws java.io.IOException
      * @author gkirtzou
      */
+    // Last Modified by Gkirtzou
     public void loadClassDb(String csvFile) 
         throws DatabaseException, IOException {
 
             KeywordIndex ksearch=new KeywordIndex();
-            Set<String> classNames=ksearch.getRDFClassNames(csvFile);
+            Set<String> classNames=ksearch.getRDFClasses(csvFile);
             Iterator<String> setIterator = classNames.iterator();
             while (setIterator.hasNext())
             {
@@ -133,6 +134,51 @@ public class DatabasePut{
     /**
      * Inserts into the database the properties. 
      * @param csvFile
+     * @throws DatabaseException 
+     * @throws java.io.IOException 
+     */
+    // Last Modified by Gkirtzou
+    public void loadPropertyDb(String csvFile)
+        throws DatabaseException, IOException, Exception {
+
+        KeywordIndex ksearch=new KeywordIndex();
+        Map<String, Set<String[]>>  properties=ksearch.getRDFProperties(csvFile);
+        for (Map.Entry<String, Set<String[]>> property : properties.entrySet()) {
+           // Split URI to prefix and name
+           String propURI = property.getKey().trim();
+           int i=this.splitURI(propURI);              
+           
+           // Create RDF property object
+           Property rdfProperty = new Property();
+           rdfProperty.setURI(propURI);
+           rdfProperty.setPropertyName(propURI.substring(i));
+           if (!property.getValue().isEmpty()) {
+        	   Set<String[]> propDescription = property.getValue();
+        	   Iterator<String[]> iter = propDescription.iterator(); 
+        	   while (iter.hasNext()) {
+        		   String[] tmpDescr =  iter.next();
+        	//	   System.out.println("Working on set :: " + tmpDescr[0] +"\t" +
+        	//			   				tmpDescr[1] + "\t" + tmpDescr[2]);
+          		   // If not 3 then information of the property description is missing
+        		   assert tmpDescr.length != 3;  
+        		   if (tmpDescr[0].equals("O")) {
+        			   rdfProperty.addClassName(Arrays.copyOfRange(tmpDescr, 1, 3));        					   
+        		   }
+        		   else if (tmpDescr[0].equals("L")) {
+        			   rdfProperty.addLiteralDatatype(Arrays.copyOfRange(tmpDescr, 1, 3));
+        		   }
+        	   }
+           }          
+           
+           // Add RDF property object to term index
+           System.out.println(rdfProperty);
+           da.propertyIndex.put(rdfProperty);
+           
+        }
+    }
+    
+    /**
+     * Inserts into the database the properties. 
      * @param vocabulary The given RDF vocabulary 
      * @param prefixes The specified prefixes
      * @param serverEndpoint The SPARQL endpoint
@@ -141,33 +187,126 @@ public class DatabasePut{
      * @throws DatabaseException 
      * @throws java.io.IOException 
      */
-    //public void loadPropertyDb(String vocabulary,String prefixes,String serverEndpoint, String namedGraph)
-    public void loadPropertyDb(String csvFile, String vocabulary,String prefixes,String serverEndpoint, String namedGraph)
-        throws DatabaseException, IOException {
+    // Last Modified by Gkirtzou   
+    public void loadPropertyDb(String prefixes,String serverEndpoint, String namedGraph)
+        throws DatabaseException, IOException, Exception {
 
         KeywordIndex ksearch=new KeywordIndex();
-       // Map<String, Set<String[]>>  properties=ksearch.getRDFPropertiesNames(prefixes, serverEndpoint, namedGraph);
-        Map<String, Set<String[]>>  properties=ksearch.getRDFProperties(csvFile, serverEndpoint, prefixes, namedGraph);
+        Map<String, Set<String[]>>  properties=ksearch.getRDFProperties(prefixes, serverEndpoint, namedGraph);
         for (Map.Entry<String, Set<String[]>> property : properties.entrySet()) {
-        
            // Split URI to prefix and name
-           String str = property.getKey().trim();
-           int i=this.splitURI(str);
-                
+           String propURI = property.getKey().trim();
+           int i=this.splitURI(propURI);              
+           
            // Create RDF property object
            Property rdfProperty = new Property();
-           rdfProperty.setURI(str);
-           rdfProperty.setPropertyName(str.substring(i));
+           rdfProperty.setURI(propURI);
+           rdfProperty.setPropertyName(propURI.substring(i));
            if (!property.getValue().isEmpty()) {
-            rdfProperty.setClassName(property.getValue());   
-           }
-           
+        	   Set<String[]> propDescription = property.getValue();
+        	   Iterator<String[]> iter = propDescription.iterator(); 
+        	   while (iter.hasNext()) {
+        		   String[] tmpDescr =  iter.next();
+          		   // If not 3 then information of the property description is missing
+        		   assert tmpDescr.length != 3;  
+        		   if (tmpDescr[0].equals("O")) {
+        			   rdfProperty.addClassName(Arrays.copyOfRange(tmpDescr, 1, 3));        					   
+        		   }
+        		   else if (tmpDescr[0].equals("L")) {
+        			   rdfProperty.addLiteralDatatype(Arrays.copyOfRange(tmpDescr, 1, 3));
+        		   }
+        	   }
+           }          
            
            // Add RDF property object to term index
            System.out.println(rdfProperty);
            da.propertyIndex.put(rdfProperty);
-         }
+           
+        }
     }
+    
+    // Last modified by @Gkirtzou
+    public void loadLiteralDb(String prefixes, String serverEndpoint, String namedGraph) {
+    	 // Find within all existing properties the ones that are of literal type
+    	 // and the literal value is of type string
+    	 KeywordIndex ksearch=new KeywordIndex();
+    	 EntityCursor<Property> properties = da.propertyByName.entities();
+         try {
+             for (Property property : properties) {
+      
+            	 ////
+            	 // If property gets literal values, ie entity-to-attribute property
+            	 //System.out.println("Checking property " + property.getURI() + " for literal values");
+                 if (property.getLiteralDatatype() != null) {   
+                	 
+                	 Set<String[]> propDescriptionLiteral = property.getLiteralDatatype();
+                	 Iterator<String[]> iter = propDescriptionLiteral.iterator();
+                	 
+              	   	 while (iter.hasNext()) {
+              	   		 // <subject class, Datatype of the object>
+              	   		 String [] propDef = iter.next();
+              	   		 assert(propDef.length != 2);
+              	   	     //System.out.println("\tSubject Class " + propDef[0]);
+               	   		 //System.out.println("\tDatatype " + propDef[1]);
+               	   		 ////
+              	   		 // If literal value is string type
+              	   		 if(propDef[1].equals("http://www.w3.org/2001/XMLSchema#string" ) ||  
+              	   		    propDef[1].equals("null")) {
+              	   			 
+                   	   		 // Triplet is <literal value, language, datatype>
+              	   			 Set<String[]> literals = ksearch.getRDFLiterals(property.getURI(), propDef[0], 
+	                			 prefixes, serverEndpoint, namedGraph); 
+              	   			 Iterator<String[]> iterL = literals.iterator();
+              	   			 
+              	   			 /// For each literal value returned from server
+              	   			 while (iterL.hasNext()) {
+              	   				 String[] litDescription = iterL.next();
+              	   				 Literal theLiteral;
+              	   				 assert(litDescription.length != 3); //never diff to 3!!              	   				 
+              	   				 
+              	   				 // check if literal value already exist otherwise create it
+              	   				 if(da.literalByName.contains(litDescription[0])) {
+	                            	 theLiteral=da.literalByName.get(litDescription[0]);
+	                             } 
+	                             else {
+	                            	 theLiteral= new Literal();
+	              	   				 theLiteral.setLiteralName(litDescription[0]);
+	                             }
+
+              	   				 // Create the quad is <language, datatype, property, class of subject>       	   				 
+                                 String[] newPropertyWithClass = new String[4];
+                                 // language
+                                 if (litDescription[1] != null && !litDescription[1].equals(""))
+                                	 newPropertyWithClass[0] = litDescription[1]; 
+                                 else
+                                	 newPropertyWithClass[0] = "null";
+                                 // datatype
+                                 if (litDescription[2] != null && !litDescription[2].equals(""))
+                                	 newPropertyWithClass[1] = litDescription[2];
+                                 else
+                                	 newPropertyWithClass[1] = "null";
+                                 //newPropertyWithClass[1] = litDescription[2]; // datatype
+                                 newPropertyWithClass[2] = property.getURI(); //property 
+                                 newPropertyWithClass[3] = propDef[0]; //class
+                                 theLiteral.addPropertyWithClass(newPropertyWithClass);
+                                 
+                                 // Add it to Term Index
+                                 System.out.println(theLiteral);
+	                             da.literalByName.put(theLiteral);
+                            } 
+              	   			 
+              	   		 }
+              	   	 }
+                 }                 
+             }
+             
+         } 
+         finally {
+        	 properties.close();
+         }
+    	
+    }
+    
     
     /**
      * Inserts into the database the literals for a given
@@ -181,7 +320,7 @@ public class DatabasePut{
      * @param classPropertiesFilepath The file path with the class-properties pairs 
      * @throws DatabaseException 
      */
-    /*
+ /*   
     public void loadLiteralDb(String vocabulary,String prefixes,String serverEndpoint,String classPropertiesFilepath)
         throws DatabaseException {
 
@@ -200,7 +339,7 @@ public class DatabasePut{
             EntityCursor<Property> properties =
                 da.propertyByName.entities();*/
             //String currentFileName="/tmp/literals.csv";
-     /*       while (scanner.hasNextLine()) {
+  /*          while (scanner.hasNextLine()) {
 
                 dataScanner = new Scanner(scanner.nextLine());
                 dataScanner.useDelimiter(",");
@@ -253,6 +392,7 @@ public class DatabasePut{
      * excluding special characters etc).
      * @throws DatabaseException 
      */
+    // Last Modified by Gkirtzou
     public void loadClassCaseInsensitiveIndexes()
         throws DatabaseException {
               
@@ -299,6 +439,7 @@ public class DatabasePut{
      * excluding special characters etc).
      * @throws DatabaseException 
      */
+    // Last modified by @Gkirtzou
     public void loadPropertyCaseInsensitiveIndexes()
         throws DatabaseException {
          
@@ -336,7 +477,7 @@ public class DatabasePut{
          
      }
      
-      /**
+   /**
      * Inserts into the database the RDF literals
      * for the inverted keyword index. The inverted 
      * index refers to similar RDF literals of the
@@ -344,7 +485,7 @@ public class DatabasePut{
      * excluding special characters etc).
      * @throws DatabaseException 
      */
-    /*
+     // Last modified by @Gkirtzou
      public void loadLiteralCaseInsensitiveIndexes()
         throws DatabaseException {
          
@@ -352,23 +493,28 @@ public class DatabasePut{
                 da.literalByName.entities();
          try {
                 for (Literal literal : literals) {
-                    Set<String> newLiterals = new HashSet<String>();
-                    LiteralInvertedIndex literalIndex= new LiteralInvertedIndex();
+                    LiteralInvertedIndex literalIndex; 
                     String literalName=literal.getLiteralName();
                     String literalLowerCaseName=literal.getLiteralName().toLowerCase();
-                    if(!da.literalInvertedIndexByName.contains(literalLowerCaseName))
-                    {
+                    
+                    if(!da.literalInvertedIndexByName.contains(literalLowerCaseName)) {
+                       	// Create LiteralInvertedIndex
+                    	literalIndex = new LiteralInvertedIndex();
+                    	// The lower case literal value
+                    	literalIndex.setLiteralIndex(literalLowerCaseName);
+                    	// The reference to the current Literal Class
+                        Set<String> newLiterals = new HashSet<>();
                         newLiterals.add(literalName);
-                        literalIndex.setLiteralIndex(literalLowerCaseName);
                         literalIndex.setLiterals(newLiterals);
+                        // Add the newly LiteralInvertedIndex to the index
                         da.literalInvertedIndexByName.put(literalIndex);
                     }
-                    else
-                    {
+                    else {
+                        // Probably it should never enter here!
                         literalIndex=da.literalInvertedIndexByName.get(literalLowerCaseName);
-                        newLiterals=literalIndex.getLiterals();
-                        newLiterals.add(literalName);
-                        literalIndex.setLiterals(newLiterals);
+                    	// The reference to the current Literal Class                        
+                        literalIndex.addLiterals(literalName);
+                        // Add the newly LiteralInvertedIndex to the index
                         da.literalInvertedIndexByName.put(literalIndex);
                     }
                     
@@ -377,7 +523,8 @@ public class DatabasePut{
                 literals.close();
             }
      }
-    */
+    
+     
     /**
      * Find the splitting point of a URI. Before the splitting 
      * point lies the prefix, while after the splitting point
@@ -385,6 +532,7 @@ public class DatabasePut{
      * @param str The URI to split
      * @return The splitting point. 
      */
+    // Last modified by @Gkirtzou
     private int splitURI(String str) {
         int i = str.lastIndexOf("/")+1;
         int j = str.lastIndexOf("#")+1;

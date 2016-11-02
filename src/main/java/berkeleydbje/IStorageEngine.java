@@ -22,6 +22,7 @@ package berkeleydbje;
 
 import java.util.Set;
 
+
 /**
  * This interface should be implemented by any class that describes
  * data structures used to form the Term index.
@@ -38,9 +39,23 @@ public interface IStorageEngine {
     boolean containsPropertyInvertedIndex(String propertyName); // called to check a property existence in the corresponding inverted index
     boolean containsLiteralInvertedIndex(String literalName); // called to check a literal existence in the corresponding inverted index
     
-    Set<String[]> getProperty(String propertyName); // called to return a set of relative classes for the given property
-    Set<String> getLiteral(String literalName); // called to return a set of relative class-property pairs for the given literal
-    Set<String> getRefProperties(String propertyIndex); // return a set of referenced properties for the given property
-    Set<String> getRefLiterals(String literalIndex); // return a set of referenced literals for the given literal
-    Set<String> getRefClasses(String classNameIndex); // return a set of referenced classes for the given RDF class
+    
+    
+    
+    // called to return a set of pair <SubjectClass, ObjectClass> for the given property search by name, if inter-entities property
+    Set<String[]> getDetailsEntityPropertyByName(String propertyName); 
+    // called to return a set of pair <SubjectClass, ObjectClass> for the given property search by URI, if inter-entities property
+    Set<String[]> getDetailsEntityPropertyByURI(String propertyURI); 
+    // called to return a set of pair <SubjectClass, ObjectType> for the given property search by name if literal property
+    Set<String[]> getDetailsLiteralPropertyByName(String propertyName); 
+    // called to return a set of pair <SubjectClass, ObjectType> for the given property search by URI if literal property
+    Set<String[]> getDetailsLiteralPropertyByURI(String propertyURI);
+    // called to return a set of relative class-property pairs for the given literal
+    Set<String[]> getDetailsLiteral(String literalName);
+    // return a set of referenced properties for the given property
+    Set<String> getRefProperties(String propertyIndex);
+    // return a set of referenced literals for the given literal
+    Set<String> getRefLiterals(String literalIndex); 
+    // return a set of referenced classes for the given RDF class
+    Set<String> getRefClasses(String classNameIndex); 
 }

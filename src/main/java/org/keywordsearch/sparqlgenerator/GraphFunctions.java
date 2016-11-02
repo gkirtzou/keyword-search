@@ -39,6 +39,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
+
 import javax.swing.JFrame;
 
 /**
@@ -264,7 +266,7 @@ public class GraphFunctions {
     public UndirectedSparseGraph getSingleAugmentedGraph(HashMap keyCombination, UndirectedSparseGraph summaryGraph, 
             BerkeleyDBStorage dbStorage){
         
-        //First of all, initialize the current augmentet graph with the summary graph
+        //First of all, initialize the current augmented graph with the summary graph
         UndirectedSparseGraph augmentedGraph=getSummaryGraph(dbStorage);
         int counter=augmentedGraph.getEdgeCount(EdgeType.UNDIRECTED);
         counter++;
@@ -859,82 +861,106 @@ public class GraphFunctions {
      * @param query_prefix The RDF schema vocabulary.
      * @return A SPARQL query in the form of String[].
      */
-    public SPARQL getSparqlQuery(Map.Entry currentMatch, String query_prefix){
-        
-        
+    // Last modified by @gkirtzou
+    public SPARQL getSparqlQuery(KeywordMatch  currentMatch, String namedGraph, String query_prefix){
+         
         Set<String> triplets = new HashSet();
         Set<String> filters = new HashSet();
-        int c=0;
-   
-        String k = (String) currentMatch.getKey();
-        
-        //System.out.println(k);
-        switch (k.substring(0, 1)) {
-            case "C":
-                c = 1;
-                break;
-
-            case "P":
-                triplets.add("?s " + query_prefix + ":" + k.substring(k.indexOf(":") + 1) + " ?o.");
-                triplets.add("?s a " + query_prefix + ":" + currentMatch.getValue() + ".");
-                break;
-
-            case "E":
-                String entDetails = (String) currentMatch.getValue();
-                triplets.add("?s " + query_prefix + ":" + k.substring(k.indexOf(":") + 1) + " ?o.");
-                triplets.add("?s a " + query_prefix + ":" + entDetails.substring(0, entDetails.indexOf(":")) + ".");
-                triplets.add("?o a " + query_prefix + ":" + entDetails.substring(entDetails.indexOf(":") + 1) + ".");
-                break;
-
-            case "L":
-                String litDetails = (String) currentMatch.getValue();
-                String propertyName = litDetails.substring(0, litDetails.indexOf(","));
-                propertyName = propertyName.substring(propertyName.indexOf(":") + 1);
-                String className = litDetails.substring(litDetails.indexOf(",") + 1);
-                className = className.substring(className.indexOf(":") + 1);
-                triplets.add("?s " + query_prefix + ":" + propertyName + " ?o.");
-                triplets.add("?s a " + query_prefix + ":" + className + ".");
-                //System.out.println(k.substring(1, 2));
-                switch (k.substring(1, 2)) {
-                    case "E":
-                        filters.add("FILTER (str(?o) = \"" + k.substring(k.indexOf(":") + 1) + "\").");
-                        break;
-                    case "B":
-                        //filters.add("FILTER (str(?o) <= \"" + k.substring(k.indexOf(":") + 1) + "\").");
-                        filters.add("FILTER (xsd:integer(?o) <= " + k.substring(k.indexOf(":") + 1) + ").");
-                        break;
-                    case "A":
-                        //filters.add("FILTER (str(?o) >= \"" + k.substring(k.indexOf(":") + 1) + "\").");
-                        filters.add("FILTER (xsd:integer(?o) >= " + k.substring(k.indexOf(":") + 1) + ").");
-                        break;
-                }
-                break;
-             
+    
+        if (currentMatch instanceof MatchRdfClass) { 
+        	// Match to RDF Class
+        	MatchRdfClass match = (MatchRdfClass) currentMatch;
+        	triplets.add("?s a <" + match.getReferenceMatch()  + ">.");
         }
+        else if (currentMatch instanceof MatchPropertyLiteral) { 
+        	// Match to Property-to-Literal 
+        	MatchPropertyLiteral match = (MatchPropertyLiteral) currentMatch;
+        	// Add triplets
+           	triplets.add("?s <" + match.getReferenceMatch() + "> ?o.");
+           	if (!match.getSubjClass().equals("null")) {
+           		triplets.add("?s a <" + match.getSubjClass()  + ">.");
+           	}           	
+       	}
+        else if (currentMatch instanceof MatchPropertyClass) { 
+        	// Match to Property-to-Class
+        	MatchPropertyClass match = (MatchPropertyClass) currentMatch;
+        	// Add triplets
+           	if (!match.getSubjClass().equals("null") || match.getObjClass().equals("null")) {
+           		triplets.add("?s <" + match.getReferenceMatch() + "> ?o.");
+           		if (! match.getSubjClass().equals("null")) {
+           			triplets.add("?s a <" + match.getSubjClass()  + ">.");
+           		}
+           		if (! match.getObjClass().equals("null")) {
+           			triplets.add("?o a <" + match.getObjClass()  + ">.");
+           		}
+           	}       
+        }
+        else if (currentMatch instanceof MatchLiteral) { // Match to Literal
+        	MatchLiteral match = (MatchLiteral) currentMatch;
+        	// Add triplets
+        	triplets.add("?s a <" + match.getSubClass() + ">.");
+        	if(! match.getLanguage().equals("null")) { 
+        		triplets.add("?s <" + match.getProperty() + "> \""+ match.getReferenceMatch() + "\"@"+ match.getLanguage() +  ".");  
+        	}
+        	if(! match.getDatatype().equals("null")) { 
+        		triplets.add("?s <" + match.getProperty() + "> \""+ match.getReferenceMatch() + "\"^^<"+ match.getDatatype() +  ">.");  
+        	}
+        }
+       
+       
+        	
+/*      /// TEMPORAL OPERATORs !!!!
+    	String propertyName = litDetails.substring(0, litDetails.indexOf(","));
+        	propertyName = propertyName.substring(propertyName.indexOf(":") + 1);
+        	String className = litDetails.substring(litDetails.indexOf(",") + 1);
+        	className = className.substring(className.indexOf(":") + 1);
+        	
+        	triplets.add("?s " + query_prefix + ":" + propertyName + " ?o.");
+        	triplets.add("?s a " + query_prefix + ":" + className + ".");
+        	//System.out.println(k.substring(1, 2));
+        	switch (k.substring(1, 2)) {
+        	case "E":
+        		filters.add("FILTER (str(?o) = \"" + k.substring(k.indexOf(":") + 1) + "\").");
+                        break;
+        	case "B":
+        		//filters.add("FILTER (str(?o) <= \"" + k.substring(k.indexOf(":") + 1) + "\").");
+        		filters.add("FILTER (xsd:integer(?o) <= " + k.substring(k.indexOf(":") + 1) + ").");
+        		break;
+        	case "A":
+        		//filters.add("FILTER (str(?o) >= \"" + k.substring(k.indexOf(":") + 1) + "\").");
+        		filters.add("FILTER (xsd:integer(?o) >= " + k.substring(k.indexOf(":") + 1) + ").");
+        		break;
+             }*/
+       // }
+               
+        
                    
-           
-        String[] sparqlQuery = new String[triplets.size() + filters.size() + 2];
-        sparqlQuery[0]="SELECT DISTINCT * WHERE {";
-        int counter = 1;
-        for(String t : triplets){
-            sparqlQuery[counter] = t;
-            counter++;
+        // Form query
+        String[] sparqlQuery = null;
+        SPARQL querySp = null;
+        if (triplets.size() > 0) {
+	        sparqlQuery = new String[triplets.size() + filters.size() + 2];
+	        sparqlQuery[0]="SELECT DISTINCT * ";
+	        if (namedGraph != null && !namedGraph.equals("")) {
+	        	//System.out.println(namedGraph);
+	        	sparqlQuery[0] = sparqlQuery[0] + " FROM <" + namedGraph + "> ";
+	        }
+	        sparqlQuery[0] = sparqlQuery[0] + "WHERE { ";
+	        int counter = 1;
+	        for(String t : triplets){
+	            sparqlQuery[counter] = t;
+	            counter++;
+	        }
+	        
+	        for(String f : filters){
+	            sparqlQuery[counter] = f;
+	            counter++;
+	        }
+	        sparqlQuery[counter] = "} LIMIT 10";
+	        querySp = new SPARQL(sparqlQuery, triplets.size());
         }
-        
-        for(String f : filters){
-            sparqlQuery[counter] = f;
-            counter++;
-        }
-        sparqlQuery[counter] = "}";
-        
-        //In case there is one keyword that matches a class, return a message.
-        if(c==1){
-            sparqlQuery = new String[1];
-            sparqlQuery[0]="The keyword you have entered is too generic. Please be more specific.";
-            return new SPARQL(sparqlQuery, -1);
-        }   
-                
-        return new SPARQL(sparqlQuery, triplets.size());
+                        
+        return querySp;
     }
     
 

@@ -17,11 +17,9 @@ public class SPARQL  {
     private double weightLongestSP;
 
     
-    
-    
     public SPARQL() {
         this.sparqlQueryArray = null;
-        this.sparqlQuery = "";
+        this.sparqlQuery = null;
         this.weightNumTriplets = 0.0;
         this.weightAverageSP = 0.0;
         this.weightLongestSP = 0.0; 
@@ -29,6 +27,10 @@ public class SPARQL  {
     
     public SPARQL(String[] query) {
         this.sparqlQueryArray = query;
+        this.sparqlQuery = "";
+        for(int i=0; i< this.sparqlQueryArray.length; i++) {
+            this.sparqlQuery += this.sparqlQueryArray[i] + " ";
+        }
         this.weightNumTriplets = 0.0;
         this.weightAverageSP = 0.0;
         this.weightLongestSP = 0.0;
@@ -43,7 +45,7 @@ public class SPARQL  {
         this.weightNumTriplets = weightNumTriplets;
         this.weightAverageSP = 0.0;
         this.weightLongestSP = 0.0;
-       }
+     }
     
     
     public String[] getSparqlQueryArray () {

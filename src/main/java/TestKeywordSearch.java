@@ -18,12 +18,14 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with KeywordSearchLib.  If not, see <http://www.gnu.org/licenses/>.
  */
+import org.javatuples.Pair;
 import org.keywordsearch.init.*;
 import org.keywordsearch.sparqlgenerator.*;
 import org.keywordsearch.sparqllib.SPARQLQueryLib;
 import org.keywordsearch.sparqllib.QueryResponse;
 import java.util.*;
 import com.hp.hpl.jena.query.QuerySolution;
+import org.javatuples.Pair;
 //import org.aksw.sparql2nl.TEST;
 
 /**
@@ -37,20 +39,17 @@ public class TestKeywordSearch {
         Initialize init = new Initialize();
         String endpoint = init.getConstants().endpoint;
         String prefixes = init.getConstants().prefixes;
+        String named_graph = init.getConstants().named_graph;
         String query_prefix = init.getConstants().query_prefix;
-        String bdbfiles_path = init.getConstants().bdbfiles_path;
                 
         // Keywords
-        String keywordInput = "Name";
-        boolean numTriplets = true;
-        boolean averageSP = true;
-        boolean longestSP = true;
+        String keywordInput = "\"Valerie Whittingham\"";
        
         // Keyword to SPARQL
-        KeywordsToSparql key2sparql = new KeywordsToSparql();
-        key2sparql.getSparqlFromKeywords(keywordInput, init.getDB(), endpoint, prefixes, query_prefix);
-        ArrayList<SPARQL> sparqlQueryList = key2sparql.getQueryList();
-        String keywordsMessage = key2sparql.getKeywordsMessage();
+        KeywordsToSparql key2sparql = new KeywordsToSparql(init.getDB(), prefixes,endpoint, named_graph, query_prefix);
+        Pair<ArrayList<SPARQL>, String> keywordResult = key2sparql.getSparqlFromKeywords(keywordInput); 
+        ArrayList<SPARQL> sparqlQueryList = keywordResult.getValue0();
+        String keywordsMessage = keywordResult.getValue1();
         
         
         // Printing Sparql Queries or Error message
@@ -76,7 +75,7 @@ public class TestKeywordSearch {
             System.out.println(i + ":" + q.getSparqlQuery());
             i++;
         }
-        
+        /*
        // System.out.println(init.getConstants().prefixes);
        // System.out.println(init.getConstants().endpoint);
         // Executing a sparlq query
@@ -88,7 +87,7 @@ public class TestKeywordSearch {
             // Prepare query for execution
             String query_sparql = sparqlQueryList.get(queryId).getSparqlQuery();
             query_sparql += " LIMIT 100";
-            String query_nl = "";
+          
                         
             System.out.println(query_sparql);
             
@@ -153,7 +152,7 @@ public class TestKeywordSearch {
             else{
                 System.out.println("No results found");
             }
-        }
+        }*/
         return;
     }
 }

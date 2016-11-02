@@ -30,6 +30,7 @@ import java.util.Set;
  * keyword index(e.g. lower case letters, keywords
  * excluding special characters etc).
  * @author fil
+ * @author gkirtzou
  */
 @Entity
 public class LiteralInvertedIndex {
@@ -57,6 +58,18 @@ public class LiteralInvertedIndex {
     }
     
     /**
+     * Expands the literal reference.
+     * @param data An reference literal
+     * to be added in the Term index. 
+     * @author gkirtzou
+     */
+    public void addLiterals(String data)
+    {
+        literals.add(data);
+    }
+    
+    
+    /**
      * Retrieves the literals.
      * @return The set of referencing RDF literals
      * in the keyword index
@@ -73,5 +86,14 @@ public class LiteralInvertedIndex {
     public String getLiteralIndex()
     {
         return literalIndex;
+    }
+    
+
+    @Override
+    public String toString() {
+        String str = "[ Literal Value:" + this.literalIndex
+                + "\n Literal Class References:\n"+ this.literals.toString()
+                + "]\n";
+        return(str);
     }
 }

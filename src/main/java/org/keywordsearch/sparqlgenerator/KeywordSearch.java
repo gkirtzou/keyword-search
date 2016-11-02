@@ -28,10 +28,10 @@ import java.util.Map;
 import org.keywordsearch.sparqllib.SPARQLQueryLib;
 import org.keywordsearch.sparqllib.QueryResponse;
 
-/**
- *
- * @author penny
- */
+	/**
+	 *
+	 * @author penny
+	 */
 public class KeywordSearch {
 
     //String serverEndpoint = "http://snf-541101.vm.okeanos.grnet.gr:2020/sparql";

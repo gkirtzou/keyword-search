@@ -24,14 +24,15 @@ import com.sleepycat.persist.model.Entity;
 import com.sleepycat.persist.model.PrimaryKey;
 import static com.sleepycat.persist.model.Relationship.MANY_TO_ONE;
 import com.sleepycat.persist.model.SecondaryKey;
-//import static com.sleepycat.persist.model.Relationship.*;
-//import com.sleepycat.persist.model.SecondaryKey;
 import java.util.*;
+
+
 
 /**
  * This class describes the RDF property
  * as a Berkeley DB entity
  * @author fil
+ * @author gkirtzou
  */
 @Entity
 public class Property {
@@ -49,19 +50,21 @@ public class Property {
     private String propertyName;
     
     /*
-     * The pairs of URIs of all RDF class <subjects, objects>
+     * The pairs of URIs of all RDF class <subject class, object class>
      * met with this RDF property. 
      * The URI of the RDF class is a unique key
      * that can be use to find it the within collection.
+     * If the property is  only entity-to-attribute type the variable is null.
      */
     private Set<String[]> classURI;
       
     /*
-     * The Datatype of the object, if property
-     * is entity-to-attribute property. Otherwise
-     * is null.
+     * The pairs of <subject class, Datatype of the object>
+     * if property is entity-to-attribute property. The datatype
+     * is equal to "null" string when information is not available. 
+     * If the property is only inter-entities type the variable is null.
      */
-    private String literalDatatype;
+    private Set<String[]> literalDatatype;
     
     /*
      * Class constructor 
@@ -113,7 +116,7 @@ public class Property {
     * Defines the literalDatatype
     * @param data The RDF datatype of the property 's subject 
     */
-    public void setLiteralDatatype(String data)
+    public void setLiteralDatatype(Set<String[]> data)
     {
         this.literalDatatype=data;
     }
@@ -122,10 +125,17 @@ public class Property {
     * Retrieves the literalDatatype
     * @return The RDF datatype of the property 's subject
     */
-    public String getLiteralDatatype()
+    public Set<String[]> getLiteralDatatype()
     {
         return this.literalDatatype;
     }
+    
+    public void addLiteralDatatype(String[] data) {
+        if(this.literalDatatype == null) {
+            this.literalDatatype = new HashSet<String[]>();
+        }
+        this.literalDatatype.add(data);    
+    }  
     
    /**
     * Defines the className
@@ -141,14 +151,14 @@ public class Property {
     * Retrieves the className
     * @return The set of the RDF classes related to the property
     */
-    public Set<String[]> getClassName()
+    public Set<String []> getClassName()
     {
         return this.classURI;
     }
-    
+  
     public void addClassName(String[] data) {
         if(this.classURI == null) {
-            this.classURI = new HashSet();
+            this.classURI = new HashSet<String[]>();
         }
         this.classURI.add(data);    
     }   
@@ -157,19 +167,31 @@ public class Property {
     public String toString() {
         String str = "[URI: " + this.URI
                 + "\nProperty: "+ this.propertyName
-                + "\nDomain-Range: ";
+                + "\n(Inter-Entities) Domain-Range: \n";
         if (this.classURI  != null) {
             for (String[] c: this.classURI) {
-                for (String s : c) {
-                    str = str + s + "\t";
-                }
+            	for (String cc :c) {
+            		str = str + cc + "\t";
+            	}
                 str = str + "\n";
             }   
         }
         else {
             str =  str + "null\n";
         }
-        str = str + "LiteralDatatype: " + this.literalDatatype + "\n]";
+        str = str + "\n(Attribute) Domain-Range: \n";
+        if (this.literalDatatype  != null) {
+        	  for (String[] c: this.literalDatatype) {
+              	for (String cc :c) {
+              		str = str + cc + "\t";
+              	}
+                  str = str + "\n";
+              } 
+        }
+        else {
+            str =  str + "null\n";
+        }
+        str = str + "]";
         return(str);
     }
 }

@@ -25,11 +25,14 @@ import com.sleepycat.persist.EntityCursor;
 import java.io.File;
 import java.util.Set;
 
+
+
 /**
  * This class encapsulates Berkeley DB operations used 
  * for the mapping of keywords to data elements
  * @author serafeim
  * @author fil
+ * @author gkirtzou
  */
 public class BerkeleyDBStorage implements IStorageEngine{
     
@@ -48,6 +51,11 @@ public class BerkeleyDBStorage implements IStorageEngine{
         da = new DataAccessor(myDbEnv.getEntityStore());
     }
     
+    
+    /******************
+     * Contains
+     *****************/
+    
     /**
      * Finds if a class is present in the keyword index
      * @param className name of the class
@@ -60,41 +68,6 @@ public class BerkeleyDBStorage implements IStorageEngine{
         return da.classByName.contains(className);
     }
     
-    /**
-     * Finds if a class is present in the inverted index
-     * @param className name of the class
-     * @return true if class is present, false otherwise
-     * @throws DatabaseException 
-     */
-    @Override
-    public boolean containsClassInvertedIndex(String className) 
-            throws DatabaseException{
-        return da.classInvertedIndexByName.contains(className);
-    }
-    
-    /**
-     * Finds if a property is present in the inverted index
-     * @param property name of the property
-     * @return true if class is present, false otherwise
-     * @throws DatabaseException 
-     */
-    @Override
-    public boolean containsPropertyInvertedIndex(String property) 
-            throws DatabaseException{
-        return da.propertyInvertedIndexByName.contains(property);
-    }
-    
-    /**
-     * Finds if a literal is present in the inverted index
-     * @param literal name of the literal
-     * @return true if class is present, false otherwise
-     * @throws DatabaseException 
-     */
-    @Override
-    public boolean containsLiteralInvertedIndex(String literal) 
-            throws DatabaseException{
-        return da.literalInvertedIndexByName.contains(literal);
-    }
     
     /**
      * Finds if a property is present in the keyword index
@@ -120,16 +93,100 @@ public class BerkeleyDBStorage implements IStorageEngine{
         return da.literalByName.contains(literalName);
     }
     
+    
     /**
-     * Gets property information from the keyword index
-     * @param propertyName the property name
-     * @return The set of class names related to the propertyName
+     * Finds if a class is present in the inverted index
+     * @param className name of the class
+     * @return true if class is present, false otherwise
      * @throws DatabaseException 
      */
     @Override
-    public Set<String[]> getProperty(String propertyName) 
+    public boolean containsClassInvertedIndex(String className) 
+            throws DatabaseException{
+        return da.classInvertedIndexByName.contains(className.toLowerCase());
+    }
+    
+    /**
+     * Finds if a property is present in the inverted index
+     * @param property name of the property
+     * @return true if class is present, false otherwise
+     * @throws DatabaseException 
+     */
+    @Override
+    public boolean containsPropertyInvertedIndex(String property) 
+            throws DatabaseException{
+        return da.propertyInvertedIndexByName.contains(property.toLowerCase());
+    }
+    
+    /**
+     * Finds if a literal is present in the inverted index
+     * @param literal name of the literal
+     * @return true if class is present, false otherwise
+     * @throws DatabaseException 
+     */
+    @Override
+    public boolean containsLiteralInvertedIndex(String literal) 
+            throws DatabaseException{
+        return da.literalInvertedIndexByName.contains(literal.toLowerCase());
+    }
+    
+    
+    /******************
+     * Get details
+     *****************/
+    
+    /**
+     * Gets property information from the term index
+     * @param propertyName the property name
+     * @return The set of pairs <subjectClass,objectClass> related to the propertyName
+     * 	if null the property is not inter-entities property
+     * @throws DatabaseException 
+     */
+    @Override
+    public Set<String[]> getDetailsEntityPropertyByName(String propertyName) 
             throws DatabaseException{
         return da.propertyByName.get(propertyName).getClassName();
+    }
+    
+    /**
+     * Gets property information from the term index
+     * @param propertyName the property name
+     * @return The set of pairs <subjectClass,objectClass> related to the propertyName
+     * 	if null the property is not inter-entities property
+     * @throws DatabaseException 
+     */
+    @Override
+    public Set<String[]> getDetailsEntityPropertyByURI(String propertyURI) 
+            throws DatabaseException{
+        return da.propertyIndex.get(propertyURI).getClassName();
+    }
+    
+    
+    /**
+     * Gets property information from the term index using property name
+     * @param propertyName the property name
+     * @return The set of pairs <subjectClass,objectType> related to the property name
+     * 	if null the property is not literal property
+     * @throws DatabaseException 
+     */
+    @Override
+    public Set<String[]> getDetailsLiteralPropertyByName(String propertyName) 
+            throws DatabaseException{
+        return da.propertyByName.get(propertyName).getLiteralDatatype();
+    }
+    
+    
+    /**
+     * Gets property information from the term index using property URI
+     * @param propertyName the property name
+     * @return The set of pairs <subjectClass,objectType> related to the propertyName
+     * 	if null the property is not literal property
+     * @throws DatabaseException 
+     */
+    @Override
+    public Set<String[]> getDetailsLiteralPropertyByURI(String propertyURI) 
+            throws DatabaseException{
+        return da.propertyIndex.get(propertyURI).getLiteralDatatype();
     }
     
     /**
@@ -139,7 +196,7 @@ public class BerkeleyDBStorage implements IStorageEngine{
      * @throws DatabaseException 
      */
     @Override
-    public Set<String> getLiteral(String literalName) 
+    public Set<String[]> getDetailsLiteral(String literalName) 
             throws DatabaseException{
         return da.literalByName.get(literalName).getPropertyWihClass();
     }
@@ -153,7 +210,7 @@ public class BerkeleyDBStorage implements IStorageEngine{
     @Override
     public Set<String> getRefClasses(String className) 
             throws DatabaseException{
-        return da.classInvertedIndexByName.get(className).getClassURIs();
+        return da.classInvertedIndexByName.get(className.toLowerCase()).getClassURIs();
     }
     
     /**
@@ -165,7 +222,7 @@ public class BerkeleyDBStorage implements IStorageEngine{
     @Override
     public Set<String> getRefProperties(String propertyIndex) 
             throws DatabaseException{
-        return da.propertyInvertedIndexByName.get(propertyIndex).getPropertiesURIs();
+        return da.propertyInvertedIndexByName.get(propertyIndex.toLowerCase()).getPropertiesURIs();
     }
     
     /**
@@ -177,22 +234,16 @@ public class BerkeleyDBStorage implements IStorageEngine{
     @Override
     public Set<String> getRefLiterals(String literalIndex) 
             throws DatabaseException{
-        return da.literalInvertedIndexByName.get(literalIndex).getLiterals();
+        return da.literalInvertedIndexByName.get(literalIndex.toLowerCase()).getLiterals();
     }
     
-    /**
-     * Closes connection with the indices
-     */
-    public void close(){
-        myDbEnv.close();
-    }
     
     /**
      * Gets a cursor to the classes of the keyword index
      * @return cursor to classes
      * @throws DatabaseException 
      */
-    public EntityCursor getClassCursor() 
+    public EntityCursor<RdfClass> getClassCursor() 
             throws DatabaseException{
         return da.classByName.entities();
     }
@@ -202,7 +253,7 @@ public class BerkeleyDBStorage implements IStorageEngine{
      * @return cursor to the properties
      * @throws DatabaseException 
      */
-    public EntityCursor getPropertyCursor() 
+    public EntityCursor<Property> getPropertyCursor() 
             throws DatabaseException{
         return da.propertyByName.entities();
     }
@@ -212,8 +263,16 @@ public class BerkeleyDBStorage implements IStorageEngine{
      * @return cursor to the literals
      * @throws DatabaseException 
      */
-    public EntityCursor getLiteralCursor() 
+    public EntityCursor<Literal> getLiteralCursor() 
             throws DatabaseException{
         return da.literalByName.entities();
+    }
+    
+
+    /**
+     * Closes connection with the indices
+     */
+    public void close(){
+        myDbEnv.close();
     }
 }

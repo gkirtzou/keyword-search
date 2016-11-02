@@ -29,7 +29,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Vector;
+
+import org.javatuples.Pair;
 
 /**
  *
@@ -43,38 +47,45 @@ public class KeywordsToSparql {
      * This class contains all the necessary functions in order to process
      * the user keywords.
      */
-    KeywordFunctions fkeywords;
+   // KeywordFunctions fkeywords;
     /**
-     * Instance of the class GraphFunctions. 
+     * Instance of the class GraphFunctions (Summary Graph Index). 
      * This class contains all the necessary functions in order to process 
      * the graphs of the Keyword Search Algorithm.
      */
     GraphFunctions fgraph;
+    BerkeleyDBStorage dbStorage;
+    String endpoint; 
+    String prefixes;
+    String query_prefix;
+    String namedGraph;
+    
     
     /**
      * The SPARQL query list.
      * This list is returned as a result after the algorithm has run.
      */
-    private ArrayList<SPARQL> sparqlQueryList;  //static?
+    //private ArrayList<SPARQL> sparqlQueryList;  //static?
     /**
      * Messages for the user.
      */
-    public String message; //static?
-
-    
-    /**
-     * 
-     */
-    private boolean isRankByNumTriples; 
+    //public String message; //static? 
+    //private boolean isRankByNumTriples; 
  
     
     
-    public KeywordsToSparql() {
-        this.sparqlQueryList = null; 
-        this.message = "";
-        this.fkeywords = new KeywordFunctions();
+    public KeywordsToSparql(BerkeleyDBStorage dbStorage, String endpoint, 
+    						String prefixes, String namedGraph, String query_prefix) {
+        //this.sparqlQueryList = null; 
+        //this.message = "";
+        //this.fkeywords = new KeywordFunctions();
         this.fgraph = new GraphFunctions();
-        this.isRankByNumTriples = false;
+        this.dbStorage = dbStorage;
+        this.endpoint = endpoint;
+        this.prefixes = prefixes;
+        this.namedGraph = namedGraph;
+        this.query_prefix = query_prefix;
+        //this.isRankByNumTriples = false;
  
     }
     /**
@@ -82,16 +93,16 @@ public class KeywordsToSparql {
      * Algorithm has run.
      * @return The SPARQL query list.
      */
-    public ArrayList<SPARQL> getQueryList() 
+   /* public ArrayList<SPARQL> getQueryList() 
     { 
         return sparqlQueryList; 
-    }
+    }*/
     
     /**
      * Returns the user messages.
      * @return The user messages.
      */
-    public String getKeywordsMessage() 
+  /*  public String getKeywordsMessage() 
     { 
         return message; 
     }
@@ -103,7 +114,7 @@ public class KeywordsToSparql {
     public void setRankByNumTriples (boolean value) {
         this.isRankByNumTriples = value;
     }
-    
+    */
     /**
      * This function gets the the user keywords as input, runs the Keyword Search
      * Algorithm and returns a list of SPARQL queries.
@@ -207,57 +218,49 @@ public class KeywordsToSparql {
      * @param query_prefix The RDF schema vocabulary.
      * @return A list of SPARQL queries. Each SPARQL query is stored in a String[].
      */
-    
-    public ArrayList<SPARQL> getSparqlFromKeywords(String keywords, BerkeleyDBStorage dbStorage, String endpoint, 
-            String prefixes, String query_prefix) throws Exception {
+    // Last modified by @gkirtzou
+    public Pair<ArrayList<SPARQL>, String> getSparqlFromKeywords(String keywords) throws Exception {
              
         // Initialize list and message
-        this.sparqlQueryList = new ArrayList<>(); 
-        this.message = "";
+    	ArrayList<SPARQL>  sparqlQueryList = new ArrayList<>(); 
+        String message = "";
+       
         // Extract keywords from user input
-        String [] userKwords = this.fkeywords.processInputKeywords(keywords);
-        //for (String str: userKwords) {
-        //    System.out.println(str);
-        //}
-        //Find the keyword matches for all the given keywords
-        HashMap keywordMatches=fkeywords.getKeywordMatches(dbStorage);    
-        //System.out.println(keywordMatches.toString());
-        
-               
-        String kwords[] = new String[keywordMatches.size()];
-        Set<String> kwordSet = keywordMatches.keySet();
-        int cnt = 0;
-        for(String str : kwordSet){
-            kwords[cnt] =  str;
-            cnt++;
+        KeywordFunctions fkeywords = new KeywordFunctions();
+        String [] userKwords = fkeywords.processInputKeywords(keywords);
+        for (String str: userKwords) {
+            System.out.println(str);
         }
         
-        //If only one keyword was matched:
+        // Find the keyword matches for all the given keywords
+        HashMap<String, Vector<KeywordMatch>> keywordMatches=fkeywords.getKeywordMatches(dbStorage);    
+        System.out.println(keywordMatches.toString());
+                      
+        // If only one keyword was matched:
         if(keywordMatches.size()==1){
             
-            //Iterate the keyword matches
-            Set set = keywordMatches.entrySet();
-            Iterator i = set.iterator();
-            
-            while(i.hasNext()) {
-                Map.Entry currentCombination = (Map.Entry)i.next();
-                
-                String keyword= (String) currentCombination.getKey();
-                HashMap matches = (HashMap) currentCombination.getValue();
-            
-                Set set1 = matches.entrySet();
-                Iterator i1 = set1.iterator();
+            // Iterate all keyword's matches
+        	Iterator<Entry<String, Vector<KeywordMatch>>> it = keywordMatches.entrySet().iterator();
+        	while(it.hasNext()) {
+                Entry<String, Vector<KeywordMatch>> currentKeyword = it.next();
+                String keyword= currentKeyword.getKey();
+                Vector<KeywordMatch> combinations = currentKeyword.getValue();
 
-                while(i1.hasNext()) {
-                    Map.Entry currentMatch = (Map.Entry)i1.next();
-                    SPARQL q = fgraph.getSparqlQuery(currentMatch, query_prefix);
-                    this.sparqlQueryList.add(q);
+        		// Iterate each match of keyword - a single combination
+                Iterator<KeywordMatch> iterCombinations = combinations.iterator();                          
+                while(iterCombinations.hasNext()) {
+                    KeywordMatch currentCombination = iterCombinations.next();
+                    SPARQL q = fgraph.getSparqlQuery(currentCombination, this.namedGraph, this.query_prefix);
+                    if (q != null){
+                    	sparqlQueryList.add(q);
+                    }
                    
                 }
 
             }
   
         }
+        /*
         //If more than one keywords were matched:
         else if(keywordMatches.size()>1){
             
@@ -311,12 +314,13 @@ public class KeywordsToSparql {
                 
                 q.setWeightAverageSP(averageSP/combinationsPairs.size());
                 q.setWeightLongestSP(longestSP);
-                this.sparqlQueryList.add(q);
+                sparqlQueryList.add(q);
                 
             }
-        }
+        }*/
         
-        return this.sparqlQueryList;
+        Pair<ArrayList<SPARQL>, String> result = new Pair<ArrayList<SPARQL>, String>(sparqlQueryList, message);
+        return result;
     }
             
 }
