@@ -150,6 +150,7 @@ public class Property {
     /**
     * Retrieves the className
     * @return The set of the RDF classes related to the property
+    * <subject class, object class>>
     */
     public Set<String []> getClassName()
     {

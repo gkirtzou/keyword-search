@@ -21,16 +21,34 @@
 package org.keywordsearch.sparqlgenerator;
 
 import berkeleydbje.BerkeleyDBStorage;
+import berkeleydbje.Literal;
 import berkeleydbje.Property;
 import berkeleydbje.RdfClass;
 import com.sleepycat.persist.EntityCursor;
 import edu.uci.ics.jung.algorithms.layout.CircleLayout;
+import edu.uci.ics.jung.algorithms.layout.FRLayout;
+import edu.uci.ics.jung.algorithms.layout.KKLayout;
 import edu.uci.ics.jung.algorithms.shortestpath.UnweightedShortestPath;
+import edu.uci.ics.jung.graph.DirectedSparseGraph;
+import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.graph.UndirectedSparseGraph;
 import edu.uci.ics.jung.graph.util.EdgeType;
+import edu.uci.ics.jung.io.GraphMLWriter;
+import edu.uci.ics.jung.io.GraphIOException;
+import edu.uci.ics.jung.io.GraphMLReader;
+import edu.uci.ics.jung.io.MatrixFile;
+import edu.uci.ics.jung.io.graphml.GraphMLReader2;
+import edu.uci.ics.jung.io.graphml.GraphMetadata;
 import edu.uci.ics.jung.visualization.VisualizationImageServer;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
+import org.apache.commons.collections15.Transformer;
 import java.awt.Dimension;
+import java.io.BufferedWriter;
+import java.io.BufferedReader;
+import java.io.FileWriter;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -39,9 +57,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Vector;
 import java.util.Map.Entry;
 
 import javax.swing.JFrame;
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.SAXException;
 
 /**
  *
@@ -49,9 +71,7 @@ import javax.swing.JFrame;
  * @author gkirtzou
  */
 public class GraphFunctions {
-    
-    int counter=100;
-    
+     
         
     /**
      * Given the class names and the property names of the RDF schema, this function
@@ -65,7 +85,7 @@ public class GraphFunctions {
      * related with the key property. 
      * @return the summary graph structure of the RDF schema
      */
-    public UndirectedSparseGraph getSummaryGraph(HashMap<String,String> classNames, HashMap<String,String> propertyNames){
+   /* public UndirectedSparseGraph getSummaryGraph(HashMap<String,String> classNames, HashMap<String,String> propertyNames){
         
         UndirectedSparseGraph summaryGraph = new UndirectedSparseGraph();
         
@@ -108,65 +128,204 @@ public class GraphFunctions {
         
         return summaryGraph;
     }
-    
+    */
     /**
      * Given the the BerkeleyDBStorage object of the RDF schema, this function
      * returns the Summary Graph structure.  
      * @param dbStorage A BerkeleyDB structure containing all the necessary information from the RDF schema. 
      * @return the summary graph structure of the RDF schema
      */
-    public UndirectedSparseGraph getSummaryGraph(BerkeleyDBStorage dbStorage){
+    public UndirectedSparseGraph<GraphNode, String> getSummaryGraph(BerkeleyDBStorage dbStorage){
         
-        UndirectedSparseGraph summaryGraph = new UndirectedSparseGraph();
+        UndirectedSparseGraph<GraphNode, String> summaryGraph = new UndirectedSparseGraph<GraphNode, String>();
         
         //Insert all the class nodes in the summary graph
-        EntityCursor<RdfClass> classNames = dbStorage.getClassCursor();
-        for(RdfClass currentClass : classNames){
+        EntityCursor<RdfClass> classes = dbStorage.getClassCursor();
+        for(RdfClass currentClass : classes){
             //Create a class node and add to the graph
-            GraphNode n = new GraphNode("C", currentClass.getClassName());
+            GraphNode n = new GraphNode(currentClass.getURI());
             summaryGraph.addVertex(n);
         }
-
-        int counter=0;
+        
+        int counter = 0;
         //Insert the property nodes in the summary graph. 
         //Only the properties that have entity objects are applicable.        
         EntityCursor<Property> propertyNames = dbStorage.getPropertyCursor();
         for(Property currentProperty : propertyNames){
-            String property = (String)currentProperty.getPropertyName();
-            Set<String[]> set = (Set)dbStorage.getProperty(property);
-            for(String[] strArray : set) {
-                //check that the property has an object that is a class
-                if(strArray.length==2){
-                    String subject=strArray[0];
-                    String object=strArray[1];
-                    
-                    GraphNode n = new GraphNode("E", property, subject, property, object, "");
-                    
-                    //Add the property node if it doesn't already exist
-                    if(!summaryGraph.containsVertex(n)){
-                        summaryGraph.addVertex(n);
-                        
-                        //Add the related edges, if they doesn't already exist
-                        //create the subject node
-                        GraphNode ns = new GraphNode("C", subject);
-                        if(summaryGraph.findEdge(ns, n)==null){
-                            summaryGraph.addEdge("edge"+counter, ns, n);
-                            counter++;
-                        }
-                    
-                        //create the object node
-                        GraphNode no = new GraphNode("C", object);
-                        if(summaryGraph.findEdge(n, no)==null){
-                            summaryGraph.addEdge("edge"+counter, n, no);
-                            counter++;
-                        } 
-                    }
-                }
+        	
+            String propertyURI = currentProperty.getURI();
+            Set<String[]> propertyDetails =dbStorage.getDetailsEntityPropertyByURI(propertyURI); 
+            
+            // If the property is not of inter-entities type, ignore
+            if (propertyDetails == null) {
+            	continue;
             }
+            
+            for(String [] classURI : propertyDetails) {
+            	assert(classURI.length !=2);
+            	// The inter-property node
+            	GraphNode n = new GraphNode(propertyURI, classURI[0], classURI[1]);
+            
+            	//Add the property node if it doesn't already exist
+                if(!summaryGraph.containsVertex(n)){
+                    summaryGraph.addVertex(n);
+                    
+                    //Add the related edges, if they doesn't already exist
+                    // The subject node (RDF class node)
+                    GraphNode ns = new GraphNode(classURI[0]);
+                    if(summaryGraph.findEdge(ns, n)==null){
+                        summaryGraph.addEdge("edge"+counter, ns, n);
+                        counter++;
+                    }
+                
+                    // The object node (RDF class node)
+                    GraphNode no = new GraphNode(classURI[1]);
+                    if(summaryGraph.findEdge(n, no)==null){
+                        summaryGraph.addEdge("edge"+counter, n, no);
+                        counter++;
+                    } 
+                }
+            }   
         }     
-
+        
+     /*   // Insert Literal and literal-property to augment graph
+        counter = 0;
+        EntityCursor<Literal> literals = dbStorage.getLiteralCursor();
+        for(Literal currentLit : literals){
+        	if (counter > 10)
+        		break;
+        	
+        	   String literal = currentLit.getLiteralName();
+               Set<String[]> litDetails = currentLit.getPropertyWihClass();
+               // <language, datatype, property, class of subject>
+               // If the property is not of inter-entities type, ignore
+                              
+               for(String [] det : litDetails) {
+               	assert(det.length !=4);
+               	// The literal node
+               	GraphNode n = new GraphNode(literal, det[3], det[2], det[1], det[0]);
+               
+               	//Add the property node if it doesn't already exist
+                   if(!summaryGraph.containsVertex(n)){
+                       summaryGraph.addVertex(n);
+                       
+                       //Add the related edges, if they doesn't already exist
+                       // The literal property node
+                       GraphNode ns = new GraphNode(det[2], det[3], null);
+                       if(summaryGraph.findEdge(ns, n)==null){
+                           summaryGraph.addEdge("edge"+counter, ns, n);
+                           counter++;
+                       }
+                       // The subject RDF class node
+                       GraphNode nss = new GraphNode(det[3]);
+                       if(summaryGraph.findEdge(ns, nss)==null){
+                           summaryGraph.addEdge("edge"+counter, ns, nss);
+                           counter++;
+                       }
+                   }
+               }
+        }
+*/
         return summaryGraph;
     }
+    
+    /**
+     * Given the filename this function returns the Summary Graph structure.  
+     * @param filename The location and name of the file that contains the summary graph structure 
+     * @return the summary graph structure of the RDF schema
+     * @throws SAXException 
+     * @throws ParserConfigurationException 
+     * @throws GraphIOException 
+     */
+    // Last modified by @gkitzou
+    // Not correct! Should be worked further!!
+    public UndirectedSparseGraph<GraphNode, String> loadSummaryGraph(String filename)
+    throws IOException, ParserConfigurationException, SAXException, GraphIOException {
+    	//MatrixFile<GraphNode, String> mf = new MatrixFile<GraphNode, String>(null, null, null, null);
+    	//return (UndirectedSparseGraph<GraphNode, String>) mf.load(filename);
+    	UndirectedSparseGraph<GraphNode, String> summaryGraph = new UndirectedSparseGraph<GraphNode, String>();
+    	BufferedReader fileReader = new BufferedReader(new FileReader(filename));
+    	
+    	/* Create the Graph Transformer */
+    	Transformer<GraphMetadata, Graph<GraphNode, String> >
+    	graphTransformer = new Transformer<GraphMetadata,
+    	                          Graph<GraphNode, String> >() {
+    	 
+    	  public Graph<GraphNode, String> 
+    	      transform(GraphMetadata metadata) {
+    	        if (metadata.getEdgeDefault().equals(
+    	        metadata.getEdgeDefault().DIRECTED)) {
+    	            return new
+    	            DirectedSparseGraph<GraphNode, String> ();
+    	        } else {
+    	            return new
+    	            UndirectedSparseGraph<GraphNode, String> ();
+    	        }
+    	      }
+    	};
+    	
+    	/* Create the Vertex Transformer */
+    	Transformer<NodeMetadata, GraphNode> vertexTransformer
+    	= new Transformer<NodeMetadata, GraphNode>() {
+    	    public MyVertex transform(NodeMetadata metadata) {
+    	        GraphNode v =
+    	            MyVertexFactory.getInstance().create();
+    	        v.setX(Double.parseDouble(
+    	                           metadata.getProperty("x")));
+    	        v.setY(Double.parseDouble(
+    	                           metadata.getProperty("y")));
+    	        return v;
+    	    }
+    	};
+    	
+    	/* Create the Edge Transformer */
+    	 Transformer<EdgeMetadata, MyEdge> edgeTransformer =
+    	 new Transformer<EdgeMetadata, MyEdge>() {
+    	     public MyEdge transform(EdgeMetadata metadata) {
+    	         MyEdge e = MyEdgeFactory.getInstance().create();
+    	         return e;
+    	     }
+    	 };
+    	
+    	
+    	/* Create the Hyperedge Transformer */
+    	Transformer<HyperEdgeMetadata, MyEdge> hyperEdgeTransformer
+    	= new Transformer<HyperEdgeMetadata, MyEdge>() {
+    	     public MyEdge transform(HyperEdgeMetadata metadata) {
+    	         MyEdge e = MyEdgeFactory.getInstance().create();
+    	         return e;
+    	     }
+    	};
+    	
+    	
+    	
+    	
+    	GraphMLReader2 graphReader = 
+    			new GraphMLReader2(fileReader, graphTransformer, null, null, null);
+    	summaryGraph = graphReader.readGraph();
+    	graphReader.close();
+    	fileReader.close();
+    	return summaryGraph;
+    }
+    
+    /**
+     * Given the filename and the Summary Graph structure, it save it to the file  
+     * @param summaryGraph The summary Graph
+     * @param filename The location and name of the file that contains the summary graph structure 
+     * @return the summary graph structure of the RDF schema
+     */
+    public void saveSummaryGraph(UndirectedSparseGraph<GraphNode, String>  summaryGraph, String filename)
+    throws IOException     {
+    	//MatrixFile<GraphNode, String> mf = new MatrixFile<GraphNode, String>(null, null, null, null);
+    	//mf.save(summaryGraph, filename);
+    	GraphMLWriter<GraphNode, String> graphWriter = new GraphMLWriter<GraphNode, String> ();
+    	PrintWriter out = new PrintWriter(new BufferedWriter(
+                         new FileWriter(filename)));
+    	graphWriter.save(summaryGraph, out);
+    	out.close();
+    	return;
+    }
+    
     
     /**
      * This functions gets a keyword combination and processes the Summary Graph as
@@ -185,6 +344,7 @@ public class GraphFunctions {
      * @param propertyNames The property names HashMap
      * @return The Augmented Graph of the Keyword Search Algorithm for this keyword match combination.
      */
+    /*
     public UndirectedSparseGraph getSingleAugmentedGraph(HashMap keyCombination, UndirectedSparseGraph summaryGraph, 
             HashMap classNames, HashMap propertyNames){
         
@@ -245,7 +405,7 @@ public class GraphFunctions {
         
         return augmentedGraph;
     }
-    
+    */
     /**
      * This functions gets a keyword combination and processes the Summary Graph as
      * described below:
@@ -263,7 +423,7 @@ public class GraphFunctions {
      * the RDF schema.
      * @return The Augmented Graph of the Keyword Search Algorithm for this keyword match combination.
      */
-    public UndirectedSparseGraph getSingleAugmentedGraph(HashMap keyCombination, UndirectedSparseGraph summaryGraph, 
+ /*   public UndirectedSparseGraph getSingleAugmentedGraph(HashMap keyCombination, UndirectedSparseGraph summaryGraph, 
             BerkeleyDBStorage dbStorage){
         
         //First of all, initialize the current augmented graph with the summary graph
@@ -342,6 +502,93 @@ public class GraphFunctions {
         
         return augmentedGraph;
     }
+  */  
+    /**
+     * This functions gets a keyword combination and processes the Summary Graph as
+     * described below:
+     * For each keyword combination component, it checks its type. 
+     * If the keyword matches a class or inter-entities property, it is ignored because it is
+     * already added in the summary graph. If the keyword matches an entity-to-attribute property, 
+     * then an entity-to-attribute property node is created and added to the graph. If the keyword 
+     * matches a literal, then a literal node and property node for the related property are created 
+     * and added in the graph.
+     * The graph that occurs after all the above additions is the Augmented Graph of the Keyword Search 
+     * Algorithm.
+     * @param currCombination A combination of keyword matches.
+     * @param summaryGraph The summary Graph
+     * @param dbStorage A BerkeleyDB structure containing all the necessary information from 
+     * the RDF schema.
+     * @return The Augmented Graph of the Keyword Search Algorithm for this keyword match combination.
+     */
+    public UndirectedSparseGraph<GraphNode, String> getAugmentedGraph(
+    		Vector<KeywordMatch> currCombination, 
+    		UndirectedSparseGraph<GraphNode, String> summaryGraph, 
+            BerkeleyDBStorage dbStorage) {
+        
+        //First of all, initialize the current augmented graph with the summary graph
+        UndirectedSparseGraph<GraphNode, String> augmentedGraph= summaryGraph;
+        int counter=augmentedGraph.getEdgeCount(EdgeType.UNDIRECTED);
+        // Increment the edge counter to correctly add new edges when required. 
+        counter++;
+               
+        //Process each keyword match from the current match combination
+        for (KeywordMatch currentMatch : currCombination) {
+        	
+        	 if (currentMatch instanceof MatchPropertyLiteral) { 
+              	// Match to Property-to-Literal 
+              	MatchPropertyLiteral match = (MatchPropertyLiteral) currentMatch;              
+              	String property = match.getReferenceMatch();
+        		String subjClass = match.getSubjClass();        	
+        		
+                // The property node
+                GraphNode p = new GraphNode(property, subjClass, null);                		
+                 
+              	//Add the literal node if it doesn't already exist
+                if(!summaryGraph.containsVertex(p)){
+                	summaryGraph.addVertex(p);
+                         
+                    //Add the related edges, if they doesn't already exist
+  	            	// The subject RDF class node
+                	GraphNode s = new GraphNode(subjClass);
+                	if(summaryGraph.findEdge(s, p)==null){
+                		summaryGraph.addEdge("edge"+counter, s, p);
+                		counter++;
+                	}
+                }
+        	 }
+             else if (currentMatch instanceof MatchLiteral) { // Match to Literal
+              	MatchLiteral match = (MatchLiteral) currentMatch;
+              	String literalValue = match.getReferenceMatch();
+        		String subjClass = match.getSubClass();
+        		String property = match.getProperty();
+        		String datatype = match.getDatatype();
+        		String language = match.getLanguage();
+                // The literal node
+                GraphNode l = new GraphNode(literalValue, subjClass,
+                		property, datatype, language);
+                 
+              	//Add the literal node if it doesn't already exist
+                if(!summaryGraph.containsVertex(l)){
+                	summaryGraph.addVertex(l);
+                         
+                    //Add the related edges, if they doesn't already exist
+                	// The literal property node
+                	GraphNode p = new GraphNode(property, subjClass, null);                	
+                	if(summaryGraph.findEdge(p, l)==null){
+                		summaryGraph.addEdge("edge"+counter, p, l);
+                		counter++;
+                	}
+                	// The subject RDF class node
+                	GraphNode s = new GraphNode(subjClass);
+                	if(summaryGraph.findEdge(s, p)==null){
+                		summaryGraph.addEdge("edge"+counter, s, p);
+                		counter++;
+                	}
+                }
+             }                               
+        }     
+        return augmentedGraph;
+    }
     
     
     /**
@@ -393,22 +640,21 @@ public class GraphFunctions {
      * @param n2 The keyword node 2 
      * @return The shortest path
      */
-    public Map getShortestPath(UndirectedSparseGraph augmGraph, GraphNode n1, GraphNode n2){
+    // Last modified by @gkirtzou
+    public Map<GraphNode, String> getShortestPath(UndirectedSparseGraph<GraphNode, String> augmGraph, GraphNode n1, GraphNode n2){
+       
+        UnweightedShortestPath<GraphNode, String> shrtPathObject = new UnweightedShortestPath<GraphNode, String>(augmGraph);
+        Map<GraphNode, String> shortestPaths = shrtPathObject.getIncomingEdgeMap(n1);
+        Map<GraphNode, String> currentShortestPath = new HashMap<GraphNode, String>();
         
-        Set<Map> shortestPathSet = new HashSet<>();
         
-        UnweightedShortestPath shrtPathObject = new UnweightedShortestPath(augmGraph);
-        Map shortestPaths = shrtPathObject.getIncomingEdgeMap(n1);
-        Map currentShortestPath = new HashMap();
-        
-        
-        Map m = shrtPathObject.getDistanceMap(n1);
+       // Map m = shrtPathObject.getDistanceMap(n1);
         int distance=shrtPathObject.getDistance(n1, n2).intValue();
         //Start from the second keyword and get the edge of its shortest path
         GraphNode curNode=n2;
         String prevEdge="";
         while(distance>=0){
-            String curEdge=(String)shortestPaths.get(curNode);
+            String curEdge= shortestPaths.get(curNode);
             currentShortestPath.put(curNode, curEdge);
 
             //Get the next node from the augmented graph. The next node is the
@@ -862,7 +1108,7 @@ public class GraphFunctions {
      * @return A SPARQL query in the form of String[].
      */
     // Last modified by @gkirtzou
-    public SPARQL getSparqlQuery(KeywordMatch  currentMatch, String namedGraph, String query_prefix){
+    public SPARQL getSparqlQuery(KeywordMatch currentMatch, String namedGraph, String query_prefix){
          
         Set<String> triplets = new HashSet();
         Set<String> filters = new HashSet();
@@ -902,8 +1148,11 @@ public class GraphFunctions {
         	if(! match.getLanguage().equals("null")) { 
         		triplets.add("?s <" + match.getProperty() + "> \""+ match.getReferenceMatch() + "\"@"+ match.getLanguage() +  ".");  
         	}
-        	if(! match.getDatatype().equals("null")) { 
+        	else if(! match.getDatatype().equals("null")) { 
         		triplets.add("?s <" + match.getProperty() + "> \""+ match.getReferenceMatch() + "\"^^<"+ match.getDatatype() +  ">.");  
+        	}
+        	else {
+        		triplets.add("?s <" + match.getProperty() + "> \""+ match.getReferenceMatch() + "\".");
         	}
         }
        
@@ -974,7 +1223,10 @@ public class GraphFunctions {
         
         VisualizationImageServer vs =
             new VisualizationImageServer(
-                new CircleLayout(graph), new Dimension(width, height));
+            	new FRLayout(graph),
+                //new CircleLayout(graph),
+            	//	new KKLayout(graph),
+                new Dimension(width, height));
         vs.getRenderContext().setVertexLabelTransformer(new ToStringLabeller());
  
         JFrame frame = new JFrame();
@@ -1028,5 +1280,59 @@ public class GraphFunctions {
        
         return endNode;
     }
+    
+    
+    /**
+     * This function returns a specific graph node based on specific information.
+     * This is necessary in order to define the shortest paths between two nodes of the 
+     * graphs.
+     * @param match The keyword match information
+     * @return A graph node object.
+     */
+    // Last modified by @gkirtzou
+    public GraphNode getNode(KeywordMatch currentMatch) {
+        
+    	GraphNode n = null;
+    	if  (currentMatch instanceof MatchRdfClass){
+    		// Match to RDf class
+    		MatchRdfClass match = (MatchRdfClass) currentMatch;           		
+    		 //Create a class node 
+            n = new GraphNode(match.getReferenceMatch());
+    	}
+    	else if (currentMatch instanceof MatchPropertyClass) { 
+    		// Match to Inter-Entities Property
+    		MatchPropertyClass match = (MatchPropertyClass) currentMatch;              
+    		String property = match.getReferenceMatch();
+    		String subjClass = match.getSubjClass();
+    		String objClass = match.getObjClass();      
+    		
+    		// The property node
+    		n = new GraphNode(property, subjClass, objClass);                			
+    	}
+    	else if (currentMatch instanceof MatchPropertyLiteral) { 
+    		// Match to Property-to-Literal 
+    		MatchPropertyLiteral match = (MatchPropertyLiteral) currentMatch;              
+    		String property = match.getReferenceMatch();
+    		String subjClass = match.getSubjClass();        	
+    		
+    		// The property node
+    		n = new GraphNode(property, subjClass, null);                			
+    	}
+    	else if (currentMatch instanceof MatchLiteral) { // Match to Literal
+    		MatchLiteral match = (MatchLiteral) currentMatch;
+    		String literalValue = match.getReferenceMatch();
+    		String subjClass = match.getSubClass();
+    		String property = match.getProperty();
+    		String datatype = match.getDatatype();
+    		String language = match.getLanguage();
+    		// The literal node
+    		n = new GraphNode(literalValue, subjClass,
+    				property, datatype, language);        
+    	}                               
+    	return(n);
+    }
+    
+    
+  
                 
 }

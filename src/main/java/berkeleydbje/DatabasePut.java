@@ -196,7 +196,8 @@ public class DatabasePut{
         for (Map.Entry<String, Set<String[]>> property : properties.entrySet()) {
            // Split URI to prefix and name
            String propURI = property.getKey().trim();
-           int i=this.splitURI(propURI);              
+           int i=this.splitURI(propURI);     
+           System.out.println("Working on property::" + propURI);
            
            // Create RDF property object
            Property rdfProperty = new Property();

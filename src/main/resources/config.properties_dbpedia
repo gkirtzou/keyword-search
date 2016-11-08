@@ -1,0 +1,11 @@
+#DBpedia
+bdbfiles_path=/home/gkirtzou/Dropbox/Work/Projects/Lodgov/KeywordSearch/UseCasesData/DBpedia/BerkeleyDBFiles
+query_prefix=dbo
+endpoint=http://leonardo.imis.athena-innovation.gr:8080/sparql
+named_graph= http://dbpedia.org 
+prefixes=PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \
+         PREFIX dbc: <http://dbpedia.org/ontology/> \
+	     PREFIX owl: <http://www.w3.org/2002/07/owl#> \
+	     PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \
+	     PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> 
+

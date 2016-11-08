@@ -43,7 +43,7 @@ public class TestKeywordSearch {
         String query_prefix = init.getConstants().query_prefix;
                 
         // Keywords
-        String keywordInput = "\"Valerie Whittingham\"";
+        String keywordInput = "\"2015-10-06 01:09:19.363\" isLastUpdatedAt 621261431615014053";//"\"Valerie Whittingham\"";
        
         // Keyword to SPARQL
         KeywordsToSparql key2sparql = new KeywordsToSparql(init.getDB(), prefixes,endpoint, named_graph, query_prefix);

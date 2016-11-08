@@ -211,11 +211,6 @@ public class KeywordsToSparql {
      * This function gets the the user keywords as input, runs the Keyword Search
      * Algorithm and returns a list of SPARQL queries.
      * @param userKwords The user keywords
-     * @param dbStorage A BerkeleyDB structure containing all the necessary information from 
-     * the RDF schema.
-     * @param endpoint The endpoint where the RDF store is located.
-     * @param prefixes All the prefixes in one string.
-     * @param query_prefix The RDF schema vocabulary.
      * @return A list of SPARQL queries. Each SPARQL query is stored in a String[].
      */
     // Last modified by @gkirtzou
@@ -228,17 +223,17 @@ public class KeywordsToSparql {
         // Extract keywords from user input
         KeywordFunctions fkeywords = new KeywordFunctions();
         String [] userKwords = fkeywords.processInputKeywords(keywords);
-        for (String str: userKwords) {
-            System.out.println(str);
-        }
+        //for (String str: userKwords) {
+        //    System.out.println(str);
+        //}
         
         // Find the keyword matches for all the given keywords
         HashMap<String, Vector<KeywordMatch>> keywordMatches=fkeywords.getKeywordMatches(dbStorage);    
-        System.out.println(keywordMatches.toString());
+       // System.out.println(keywordMatches.toString());
                       
         // If only one keyword was matched:
         if(keywordMatches.size()==1){
-            
+          
             // Iterate all keyword's matches
         	Iterator<Entry<String, Vector<KeywordMatch>>> it = keywordMatches.entrySet().iterator();
         	while(it.hasNext()) {
@@ -260,7 +255,6 @@ public class KeywordsToSparql {
             }
   
         }
-        /*
         //If more than one keywords were matched:
         else if(keywordMatches.size()>1){
             
@@ -273,13 +267,55 @@ public class KeywordsToSparql {
                 }
             }
             
-            //Create the summary graph
-            UndirectedSparseGraph summaryGraph = fgraph.getSummaryGraph(dbStorage);
-        
+            //Create the summary graph  -- Maybe create once with berkeley files and load?
+            UndirectedSparseGraph<GraphNode, String> summaryGraph = fgraph.getSummaryGraph(dbStorage);
+            //System.out.println("Before saving ... \n\n\n" +summaryGraph);
+            //fgraph.graphDisplay(summaryGraph, 1100, 500);
+            //fgraph.saveSummaryGraph(summaryGraph, "/home/gkirtzou/lala");
+            //UndirectedSparseGraph<GraphNode, String> lala = fgraph.loadSummaryGraph("/home/gkirtzou/lala");
+            //System.out.println("\n\n\n\n\n\n\nAfter loading.... \n\n\n"+lala);
+            
             //Create all the possible combinations from the above matches
-            Set<HashMap> keywordCombinations=fkeywords.getKeywordCombinations(kwords, keywordMatches);
-         
+            Vector<Vector<KeywordMatch>> keywordCombinations=fkeywords.getKeywordCombinations(userKwords, keywordMatches);
+                             
             //Process each combination separately:
+            for (Vector<KeywordMatch> currCombination: keywordCombinations) {
+            	 
+                // Create the augmented graph
+                UndirectedSparseGraph<GraphNode, String> augmentedGraph=fgraph.getAugmentedGraph(currCombination, summaryGraph, dbStorage);
+                System.out.println("Augmented Summary graph:\n" + augmentedGraph);
+                
+                // Get all pairs
+                Vector<Pair<KeywordMatch, KeywordMatch>>  combinationPairs=fkeywords.getCombinationPairs(currCombination);
+                System.out.println("Pairs in combination ::\n" + combinationPairs);
+
+          		// Initialize the shortest paths data structure
+                Set<Map<GraphNode, String>> shortestPathSet = new HashSet<>();
+       		    //For each pair:
+                double averageSP = 0.0;
+                double longestSP = 0.0;
+                for(Pair<KeywordMatch, KeywordMatch> pair : combinationPairs){
+                    // Get the end nodes of the shortest path                    
+                    GraphNode n1 = fgraph.getNode(pair.getValue0());
+                    GraphNode n2 = fgraph.getNode(pair.getValue1());
+                                       
+                    // Calculate the shortest path
+                    Map<GraphNode, String> sPath =fgraph.getShortestPath(augmentedGraph, n1, n2); 
+                    averageSP = averageSP + sPath.size();
+                    if (longestSP < sPath.size())
+                        longestSP = sPath.size();
+                    shortestPathSet.add(sPath);      
+                    System.out.println("Pair::" + pair);
+                    System.out.println("Shortest path::" + sPath);
+                }
+/*                UndirectedSparseGraph<GraphNode, String> queryPatternGraph = fgraph.getQueryPatternGraph(shortestPathSet, augmentedGraph, dbStorage);  
+                SPARQL q = fgraph.getSparqlQuery(queryPatternGraph, dbStorage, query_prefix);            
+                q.setWeightAverageSP(averageSP/combinationsPairs.size());
+                q.setWeightLongestSP(longestSP);
+                sparqlQueryList.add(q);
+  */          
+            }
+            /*
             for(HashMap kCombination : keywordCombinations) {
             
                 //Initialize the shortest paths data structure
@@ -316,8 +352,8 @@ public class KeywordsToSparql {
                 q.setWeightLongestSP(longestSP);
                 sparqlQueryList.add(q);
                 
-            }
-        }*/
+            }*/
+        }
         
         Pair<ArrayList<SPARQL>, String> result = new Pair<ArrayList<SPARQL>, String>(sparqlQueryList, message);
         return result;

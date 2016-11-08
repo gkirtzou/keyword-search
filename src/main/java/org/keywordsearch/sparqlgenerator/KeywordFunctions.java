@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.javatuples.Pair;
@@ -180,7 +181,8 @@ public class KeywordFunctions  {
         }
                
         //Remove special characters
-        kwords = kwords.replaceAll("[:]", "");
+        	// In comment the next line just for testing reason in ai4b!!!
+        //kwords = kwords.replaceAll("[:]", "");
         
         Pattern pattern = Pattern.compile("\"(.*?)\"");
         Matcher m = pattern.matcher(kwords);                
@@ -491,7 +493,6 @@ public class KeywordFunctions  {
      * the application. 
      */
     // last modified by @gkirtzou
-    // *** WORKING ON THIS*****
     public HashMap<String, Vector<KeywordMatch>> getKeywordMatches(BerkeleyDBStorage dbStorage){
         
         HashMap<String, Vector<KeywordMatch>> keywordMatches = new HashMap<String, Vector<KeywordMatch>>();
@@ -700,31 +701,61 @@ public class KeywordFunctions  {
      * @param keywordMatches The keyword matches of the user keywords.
      * @return A set of all the possible combinations among the keyword matches.
      */
-    public Set<HashMap> getKeywordCombinations(String[] kwords, HashMap keywordMatches){
-        
-        Set<HashMap> keywordCombinations = new HashSet<HashMap>();
-                
-        //Process the first keyword
-        HashMap map=(HashMap)keywordMatches.get(kwords[0].trim());
-        HashMap combinations = new HashMap();
-        Set set = map.entrySet();
-        Iterator i = set.iterator();
-
-        while(i.hasNext()) {
-            Map.Entry currentEntry1 = (Map.Entry)i.next();
-            combinations.put(currentEntry1.getKey(), currentEntry1.getValue());
-            keywordCombinations.add(combinations);
-            combinations = new HashMap();
+    // Last modified by @gkirtzou
+    // WORKING ON THIS 
+    public Vector<Vector<KeywordMatch>> getKeywordCombinations(String[] kwords, HashMap<String, Vector<KeywordMatch>> keywordMatches){
+        // Calculate the number of keyword matched combinations
+    	// and re-map keyword matches to vector for easier calculations  
+    	int[] counters = new int[keywordMatches.size()];
+    	int numCombinations = 1;   
+    	int i = 0;
+    	Vector<Vector<KeywordMatch>> mapKeywordMatches = new Vector<Vector<KeywordMatch>>();
+        Iterator<Entry<String, Vector<KeywordMatch>>> it = keywordMatches.entrySet().iterator();
+        while(it.hasNext()) { 
+    		Entry<String, Vector<KeywordMatch>> currentKeyword = it.next();
+    		mapKeywordMatches.add(currentKeyword.getValue());
+            int numMatches = currentKeyword.getValue().size();
+    		numCombinations *= numMatches;
+            counters[i++] = 0;   
         }
-
-        for(int j=1; j<kwords.length; j++){
-            map=(HashMap)keywordMatches.get(kwords[j].trim());
-            keywordCombinations=getKeywordSingleCombination(keywordCombinations, map);
-        }
+        // Calculate combinations
+        Vector<Vector<KeywordMatch>> keywordCombinations = new Vector<Vector<KeywordMatch>>(numCombinations);
+        System.out.println("Mapped KeyMatches::\n" + mapKeywordMatches);
         
+        do{
+           keywordCombinations.addElement(this.getCombination(counters, mapKeywordMatches));
+        } while(increment(counters, mapKeywordMatches));
+
         return keywordCombinations;
+        
     }
     
+    
+    private Vector<KeywordMatch> getCombination(int[] counters, Vector<Vector<KeywordMatch>> keywordMatches) {
+    	Vector<KeywordMatch> combination = new Vector<KeywordMatch>(counters.length);    
+    	for(int i = 0; i < counters.length; i++) {        
+	    	combination.addElement(keywordMatches.get(i).get(counters[i]));	   
+	    }
+    	System.out.print("\n\nCombination::\n");
+	    for (int i = 0; i < counters.length; i++) {
+	    	System.out.print(combination.get(i));
+	    	
+	    }
+    	return combination;
+
+	}
+    
+    private boolean increment(int[] counters, Vector<Vector<KeywordMatch>> keywordMatches) {
+        for(int i=counters.length-1; i>=0; i--) {
+            if(counters[i] < keywordMatches.get(i).size()-1) {
+                counters[i]++;
+                return true;
+            } else {
+                counters[i] = 0;
+            }
+        }
+        return false;
+    }
     /**
      * This function returns all possible combinations between two keywords.
      * @param map1 The keyword matches of the first keyword 
@@ -799,5 +830,31 @@ public class KeywordFunctions  {
         return combinationsPairs;
     } 
     
-  
+    
+    /**
+     * This functions gets a singleCombination of keyword matches as input and returns 
+     * all the possible pairs of the combination components. Of course, this makes more sense 
+     * in case of three user keywords or more. If the user has inserted one or two keywords, this 
+     * function returns the singleCombination.
+     * The pairs that are returned from this function are needed for the calculation of shortest 
+     * paths in later steps of the algorithm.
+     * @param currCombination The set of current combination of matches 
+     * @return A set of keyword pairs. All the keywords of the pairs belong to the same keyword 
+     * combination.
+     */
+    public Vector<Pair<KeywordMatch, KeywordMatch>> getCombinationPairs(Vector<KeywordMatch> currCombination) {
+        
+    	Vector<Pair<KeywordMatch, KeywordMatch>> combinationPairs = new  Vector<Pair<KeywordMatch, KeywordMatch>>();
+    	int numMatches = currCombination.size();
+    	for(int i = 0; i < numMatches; i++) {
+    		KeywordMatch match1 = currCombination.get(i);
+    		for(int j=i+1; j < numMatches; j++) {
+    			KeywordMatch match2 = currCombination.get(j);
+    			combinationPairs.add(new Pair(match1,match2));
+    		}
+    	}
+    	
+    	return combinationPairs;     
+    } 
+    
 }

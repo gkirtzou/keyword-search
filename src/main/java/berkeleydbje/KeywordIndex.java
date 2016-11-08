@@ -58,10 +58,12 @@ public class KeywordIndex {
         // Set SPARQL query to get data related to class 
         String query = null;
         if (namedGraph != null) {
-            query = "SELECT distinct ?c FROM <" + namedGraph + "> WHERE {?s a ?c} limit 10"; 
+            query = "SELECT distinct ?c FROM <" + namedGraph + "> WHERE {?s a ?c} ";
+            query = query + "LIMTI 10";
         }
         else {
             query = "SELECT distinct ?c WHERE {?s a ?c}"; 
+            //query = query + "LIMTI 10";
         }
               
         // Run SPARQL Query
@@ -120,7 +122,7 @@ public class KeywordIndex {
         while ((line = br.readLine()) != null) {
             ///////////// 
         	// Extract RDF property description, ie name, type, and range/domain if available
-        	//System.out.println(line);
+        	System.out.println(line);
         	String[] splits = line.split(",");
         	assert splits.length != 6;
             
@@ -149,6 +151,17 @@ public class KeywordIndex {
                 range = splits[3].replace("\"", "");
             	}
         	}
+            ///////////
+            /// if inter-entity property has null domain or null range, ignore
+            if (type.equals("O") && (domain.equals("null") || range.equals("null"))) {
+            	continue;            	
+            }
+            // if literal property has null domain ignore
+            if (type.equals("L") && domain.equals("null")) {
+            	continue;            	
+            }
+            
+            
             ////////
             // Add the RDF property description to the result set
             boolean containsProperty = properties.containsKey(property);
@@ -189,13 +202,14 @@ public class KeywordIndex {
         // connect to SPARQL endpoint
         queryLib.connect(serverEndpoint);  
         // Form query 
-        String query = "SELECT distinct ?p ?cS ?cR (datatype(?o) AS ?datatype) (isLiteral(?o) AS ?literalType) (isIRI(?o) AS ?objectType) ";
+        String query = "SELECT distinct ?p ?pD ?pR (datatype(?o) AS ?datatype) (isLiteral(?o) AS ?literalType) (isIRI(?o) AS ?objectType) ";
         if (namedGraph != null && !namedGraph.equals("")) {
         	//System.out.println(namedGraph);
         	query = query + " FROM <" + namedGraph + "> ";
         }
-        query = query + "WHERE { ?s ?p ?o. optional {?s rdf:type ?cS} optional {?o rdf:type ?cR} } LIMIT 5";
-       // System.out.println(query);
+        query = query + "WHERE { ?s ?p ?o. optional {?s rdf:type ?pD} optional {?o rdf:type ?pR} }";
+        query = query + "LIMIT 50";
+        System.out.println(query);
         // Send query and get response
         QueryResponse qr = queryLib.sendQuery(prefixes + query);
         ///////
@@ -203,17 +217,17 @@ public class KeywordIndex {
         for (QuerySolution s : qr.getResultSet()){
         	///////////// 
         	// Extract RDF property description, ie name, type, and range/domain if available
-            //System.out.println("QuerySolution " + s);
-            String property = "";
+            System.out.println("QuerySolution " + s);
+            String property = "null";
             if (s.get("?p") != null) {
             	property = s.get("?p").toString().replace("\"", "");;
             }
-            String domain = "";
-            if (s.get("?cS") != null) {
-            	domain = s.get("?cS").toString().replace("\"", "");;
+            String domain = "null";
+            if (s.get("?pD") != null) {
+            	domain = s.get("?pD").toString().replace("\"", "");;
             }
-            String type = "";
-            String range = "";
+            String type = "null";
+            String range = "null";
             if (s.get("?literalType") != null && s.get("?literalType").asLiteral().getInt() == 1){
             	type = "L";
             	if (s.get("?datatype") != null) {
@@ -222,10 +236,20 @@ public class KeywordIndex {
             }
             else if (s.get("?objectType") != null &&  s.get("?objectType").asLiteral().getInt() == 1 ) {
             	type = "O";
-            	if (s.get("?cO") != null) {
-            		range = s.get("?cO").toString().replace("\"", "");;
+            	if (s.get("?pR") != null) {
+            		range = s.get("?pR").toString().replace("\"", "");;
             	}
             }
+            ///////////
+            /// if inter-entity property has null domain or null range, ignore
+            if (type.equals("O") && (domain.equals("null") || range.equals("null"))) {
+            	continue;            	
+            }
+            // if literal property has null domain ignore
+            if (type.equals("L") && domain.equals("null")) {
+            	continue;            	
+            }            
+            
             ////////
             // Add the RDF property description to the result set
             boolean containsProperty = properties.containsKey(property);
@@ -286,7 +310,7 @@ public class KeywordIndex {
             	String ss = s.get("?v").asLiteral().getString();
             	ss = ss.replace("\"", "");
             	ss = ss.replace("\\", "");
-            	//System.out.println("Value::" + ss);
+            	System.out.println("Value::" + ss);
             	//System.out.println("Language::" + s.get("?v").asLiteral().getLanguage());
             	//System.out.println("Datatype::" + s.get("?v").asLiteral().getDatatypeURI());
             

@@ -34,72 +34,92 @@ public class GraphNode{
      * "E" if the node represents an entity-to-attribute property
      * "L" if the node represents a literal
      */
-    private String isType = "";
+    private String isType;
     /**
      * The node name.
      * This can be the class name, property name or literal depending on the node type.
      */
-    private String nodeName = "";
+    private String nodeName;
     /**
      * The subject of the node. 
      * For example, if the node type is a property, this attribute is the subject
      * related to the property node.
      */
-    private String subject = "";
+    private String subject;
     /**
      * The property to which a literal is related. 
      * 
      */
-    private String property = "";
+    private String property;
     /**
      * The object to which a property is related.
      *
      */
-    private String object = "";
+    private String object;
     
     /**
      * 
      */
-    private String object_filter = "";
-    /**
-     * Constructor of a general node. A general node is a node with unknown type
-     * at the time of creation.
-     * @param The name of the node 
-     */
-    public GraphNode(String nodeName){
-        this.nodeName = nodeName;
-    }
+    private String object_filter;
     
+    // Information in case the node is of literal type.
+    // datatype
+    private String datatype;
+    // language
+    private String language;
+    
+       
     /**
      * Constructor of a class node.
-     * @param isType The type of the node. In this case isType="C".
      * @param nodeName The class name.
      */
-    public GraphNode(String isType, String nodeName){
-        this.isType = isType;
+    public GraphNode(String nodeName){
+        this.isType = "C";
         this.nodeName = nodeName;
+        this.subject = null;
+        this.property = null;
+        this.object = null;
+        this.object_filter = null;
+        this.datatype = null;
+        this.language = null;
     }
     
     /**
-     * Constructor of a property or literal node
-     * @param isType The node type.
-     * @param nodeName The node name.
-     * @param subject The subject of the node. Either the subject of the property (in case 
-     * of property node) or the subject of the property to which the literal is related (in 
-     * case of literal node).     
-     * @param property In case of a property node, this is the same as the nodeName. In case 
-     * of a literal node, this is the property to which the literal is related.
+     * Constructor of an inter-entities property node.
+     * @param nodeName The property name.
+     * @param subject The subject of the property. 
      * @param object In case of an inter-entity property node, this is the object class of 
-     * the entity node. In case of an entity-to-attribute property node, this field is empty. 
-     * In case of a literal node, this is the same as the nodeName.
+     * the property node. In case of an entity-to-attribute property node, this field is empty. 
      */
-    public GraphNode(String isType, String nodeName, String subject, String property, String object, String object_filter){
-        this.isType = isType;
+    public GraphNode(String nodeName, String subject, String object){
+        this.isType = "P";
+        this.nodeName = nodeName;
+        this.subject = subject;
+        this.property = null;
+        this.object = object;
+        this.object_filter = null;
+        this.datatype = null;
+        this.language = null;
+    }
+    
+    
+    /**
+     * Constructor of a literal node
+     * @param nodeName The node name.
+     * @param subject The subject of the property to which the literal is related.
+     * @param property The property to which the literal is related.
+     * @param datatype The datatype information of the literal value
+     * @param language The language information of the literal value
+     */
+    public GraphNode(String nodeName, String subject, String property, String datatype, String language){
+        this.isType = "L";
         this.nodeName = nodeName;
         this.subject = subject;
         this.property = property;
-        this.object = object;
-        this.object_filter = object_filter;               
+        this.object = null; 
+        this.object_filter = null;
+        this.datatype = datatype;
+        this.language = language;
     }
     
 
@@ -114,10 +134,39 @@ public class GraphNode{
         boolean comparison = false;
     
         final GraphNode other = (GraphNode) obj;
-        if (this.isType.equals(other.isType) && this.nodeName.equals(other.nodeName) && this.subject.equals(other.subject) 
-                && this.property.equals(other.property) && this.object.equals(other.object)&&
-                this.object_filter.equals(other.object_filter)) {
-            comparison = true;
+        // Compare RDF class nodes
+        if (this.isType != null && this.isType.equals("C") 
+        	&& this.isType.equals(other.isType) &&
+        	this.nodeName.equals(other.nodeName)) {
+        	comparison = true;
+        }
+        // Compare Property nodes
+        else if (this.isType != null && this.isType.equals("P") 
+        		&& this.isType.equals(other.isType) 
+        		&& this.nodeName != null && this.nodeName.equals(other.nodeName) 
+        		&& this.subject != null && this.subject.equals(other.subject)) {
+       		// Compare inter-entities properties
+        	if (this.object != null && this.object.equals(other.object)) {
+        		comparison = true;
+        	}
+        	// Compare entity-to-literal properties
+        	else if (this.object == null && other.object == null) {
+        		comparison = true;
+        	}
+        }	
+        // Compare Literal nodes
+        else if (this.isType != null && this.isType.equals("L") 
+        		&& this.isType.equals(other.isType)
+        		&& this.nodeName.equals(other.nodeName)) {
+        	if (this.datatype != null && this.datatype.equals(other.datatype)) {
+        		comparison = true;
+        	}
+        	else if (this.language != null && this.language.equals(other.language)) {
+        		comparison = true;
+        	}
+        	else if (this.datatype == null && this.language == null) {
+        		comparison = true;
+        	}
         }
 
         return comparison;
@@ -135,6 +184,8 @@ public class GraphNode{
         hash = 53 * hash + (this.property != null ? this.property.hashCode() : 0);
         hash = 53 * hash + (this.object != null ? this.object.hashCode() : 0);
         hash = 53 * hash + (this.object_filter != null ? this.object_filter.hashCode() : 0);
+        hash = 53 * hash + (this.datatype != null ? this.datatype.hashCode() : 0);
+        hash = 53 * hash + (this.language != null ? this.language.hashCode() : 0);
         return hash;
     }
     
@@ -234,16 +285,69 @@ public class GraphNode{
         this.object_filter = object_filter;
     }
     
+   /**
+    * Returns the datatype of a Node Literal
+    * @return the datatype of a Node Literal
+    */
+   public String getDatatype() {
+       return this.datatype;
+   }
+
+   /**
+    * Sets the datatype of a Node Literal
+    * @param datatype the datatype of a Node Literal
+    */
+   public void setDatatype(String datatype) {
+       this.datatype = datatype;
+   }
+
+ 
+   /**
+    * Returns the language of a Node Literal
+    * @return the language of a Node Literal
+    */
+   public String getLanguage() {
+       return this.language;
+   }
+
+   /**
+    * Sets the language of a Node Literal
+    * @param language the language of a Node Literal
+    */
+   public void setLanguage(String language) {
+       this.language = language;
+   }
+    
     /**
      * @override
      */
     public String toString() {
-        System.out.print("Type = " + this.isType);
-        System.out.print("\tNode Name = " + this.nodeName);
-        System.out.print("\tSubject = " + this.subject);
-        System.out.print("\tPredicate = " + this.property);
-        System.out.print("\tObject = " + this.object);
-        System.out.println("\tObject Filter Option = " + this.object_filter);
-        return "";
+    	String str = "Type = " + this.isType +
+    				 "\tNode Name = " + this.nodeName +
+    				 "\tSubject = " + this.subject + 
+    				 "\tPredicate = " + this.property +
+    				 "\tObject = " + this.object +
+    				 "\tObject Filter Option = " + this.object_filter +
+    				 "\tDatatype = " + this.datatype +
+    				 "\tLanguage = " + this.language + 
+    				 "\n";
+    	return(str);
+    	
     }
+    
+    /**
+     * @override used for graph visualization
+     */
+ /*   public String toString() {
+    	 int i = this.nodeName.lastIndexOf("/")+1;
+         int j = this.nodeName.lastIndexOf("#")+1;
+         String str = null;
+         if (i < j) {
+        	 str = this.nodeName.substring(j);
+         }
+         else {
+        	 str = this.nodeName.substring(i);	        
+         }    	
+        return str;
+    }*/
 }
