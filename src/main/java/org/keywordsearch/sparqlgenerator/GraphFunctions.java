@@ -33,6 +33,7 @@ import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.graph.UndirectedSparseGraph;
 import edu.uci.ics.jung.graph.util.EdgeType;
+//import edu.uci.ics.jung.graph.util.Pair;
 import edu.uci.ics.jung.io.GraphMLWriter;
 import edu.uci.ics.jung.io.GraphIOException;
 import edu.uci.ics.jung.io.GraphMLReader;
@@ -42,6 +43,8 @@ import edu.uci.ics.jung.io.graphml.GraphMetadata;
 import edu.uci.ics.jung.visualization.VisualizationImageServer;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
 import org.apache.commons.collections15.Transformer;
+import org.javatuples.Pair;
+
 import java.awt.Dimension;
 import java.io.BufferedWriter;
 import java.io.BufferedReader;
@@ -263,8 +266,8 @@ public class GraphFunctions {
     	        }
     	      }
     	};
-    	
-    	/* Create the Vertex Transformer */
+    	/*
+    	// Create the Vertex Transformer 
     	Transformer<NodeMetadata, GraphNode> vertexTransformer
     	= new Transformer<NodeMetadata, GraphNode>() {
     	    public MyVertex transform(NodeMetadata metadata) {
@@ -278,7 +281,7 @@ public class GraphFunctions {
     	    }
     	};
     	
-    	/* Create the Edge Transformer */
+    	// Create the Edge Transformer 
     	 Transformer<EdgeMetadata, MyEdge> edgeTransformer =
     	 new Transformer<EdgeMetadata, MyEdge>() {
     	     public MyEdge transform(EdgeMetadata metadata) {
@@ -288,7 +291,7 @@ public class GraphFunctions {
     	 };
     	
     	
-    	/* Create the Hyperedge Transformer */
+    	// Create the Hyperedge Transformer 
     	Transformer<HyperEdgeMetadata, MyEdge> hyperEdgeTransformer
     	= new Transformer<HyperEdgeMetadata, MyEdge>() {
     	     public MyEdge transform(HyperEdgeMetadata metadata) {
@@ -297,13 +300,13 @@ public class GraphFunctions {
     	     }
     	};
     	
-    	
-    	
+    	    	
     	
     	GraphMLReader2 graphReader = 
     			new GraphMLReader2(fileReader, graphTransformer, null, null, null);
     	summaryGraph = graphReader.readGraph();
     	graphReader.close();
+    	*/
     	fileReader.close();
     	return summaryGraph;
     }
@@ -520,6 +523,7 @@ public class GraphFunctions {
      * the RDF schema.
      * @return The Augmented Graph of the Keyword Search Algorithm for this keyword match combination.
      */
+    // Last modified by @gkirtzou
     public UndirectedSparseGraph<GraphNode, String> getAugmentedGraph(
     		Vector<KeywordMatch> currCombination, 
     		UndirectedSparseGraph<GraphNode, String> summaryGraph, 
@@ -740,7 +744,7 @@ public class GraphFunctions {
      * the RDF schema.
      * @return The query pattern graph.
      */
-    public UndirectedSparseGraph getQueryPatternGraph(Set<Map> shortestPathSet, UndirectedSparseGraph augmentedGraph, 
+  /*  public UndirectedSparseGraph getQueryPatternGraph(Set<Map> shortestPathSet, UndirectedSparseGraph augmentedGraph, 
             BerkeleyDBStorage dbStorage){
         
         UndirectedSparseGraph queryPatternGraph = new UndirectedSparseGraph();
@@ -847,7 +851,150 @@ public class GraphFunctions {
         }
                         
         return queryPatternGraph;
-    }   
+    }   */
+    
+    /**
+     * 
+     * This function merges the shortest paths of all keyword pairs of a keyword combination
+     * into one new graph the queryPatternGraph. This graph will be used in order to form the SPARQL 
+     * query for this keyword combination.
+     * @param shortestPathSet The set with all the shortest paths for this keyword combination.
+     * @return The query pattern graph.
+     */
+    // Last modified by @gkirtzou
+    public UndirectedSparseGraph<GraphNode, String>  getQueryPatternGraph(Set<Map<GraphNode, String> > shortestPathSet,
+    		UndirectedSparseGraph<GraphNode, String> augmentedGraph){
+        
+        UndirectedSparseGraph<GraphNode, String>  queryPatternGraph = new UndirectedSparseGraph<>();
+        HashSet<GraphNode> propertyLitNodes = new HashSet<>();       
+        HashMap<String, String> classVariables = new HashMap<>();
+        int counter=0;        
+        int counterEntities = 0;
+        
+        for(Map<GraphNode, String>  shortestPath : shortestPathSet) {                    
+            // Get the keys of the Map. The keys represent the nodes of the current shortest path.
+            Set<GraphNode> nodes = shortestPath.keySet();
+
+            // Insert these nodes to the query pattern graph.
+            for(GraphNode node : nodes) {
+            	// RDF class nodes
+            	if (node.getIsType().equals("C") && !queryPatternGraph.containsVertex(node)) {            	
+            		node.setVariable("?e" + counterEntities);
+            		boolean added = queryPatternGraph.addVertex(node);
+            		if (added) {            			
+            			classVariables.put(node.getNodeName(), "?e" + counterEntities);
+            			counterEntities++;
+            		}
+            	}
+            	// RDF property nodes
+            	else if (node.getIsType().equals("P")) {
+            		boolean added = queryPatternGraph.addVertex(node);
+            		// If added to Query Pattern Graph add related node
+            		// if needed
+            		if (added) {
+	            		// Create the subject node and the related edge
+	            		GraphNode subjNode = new GraphNode(node.getSubject());	            		
+	            		// Added
+	            		if(!queryPatternGraph.containsVertex(subjNode)){
+	            			subjNode.setVariable("?e" + counterEntities);
+	                        queryPatternGraph.addVertex(subjNode);	    
+	                        classVariables.put(subjNode.getNodeName(), "?e" + counterEntities);
+	                        counterEntities++;
+	            		}
+	            		// Get the correct variable name
+	            		else {
+	            			subjNode.setVariable(classVariables.get(node.getSubject()));
+	            		}
+	            		
+	            		if(queryPatternGraph.findEdge(subjNode, node) == null){
+	            			queryPatternGraph.addEdge("edge"+counter, subjNode, node);
+	            			counter++;
+	            		}
+	            		
+	            		// If property is inter-entities property
+	            		if (node.getObject() != null) {
+		            		// Create the object node and the related edge
+		            		GraphNode objNode = new GraphNode(node.getObject());            		
+		            		
+		            		if(!queryPatternGraph.containsVertex(objNode)){
+		            			objNode.setVariable("?e" + counterEntities);
+		                        queryPatternGraph.addVertex(objNode);
+		                        classVariables.put(objNode.getNodeName(), "?e" + counterEntities);
+		                        counterEntities++;
+		            		}
+		            		// Get the correct variable name
+		            		else {
+		            			objNode.setVariable(classVariables.get(node.getObject()));
+		            		}
+		            		
+		            		if(queryPatternGraph.findEdge(objNode, node) == null){
+		            			queryPatternGraph.addEdge("edge"+counter, objNode, node);
+		            			counter++;
+		            		}
+	            		}   
+	            		// If property is literal property, further process may needed
+	            		else if (node.getObject() == null){
+	            			propertyLitNodes.add(node);
+	            		}
+            		}
+            	}
+            	// Literal nodes
+            	else if (node.getIsType().equals("L")) {
+            		queryPatternGraph.addVertex(node);
+            		// Create the property node and the related edge
+            		GraphNode propNode = new GraphNode(node.getProperty(), node.getSubject(), null);            		
+            		if(!queryPatternGraph.containsVertex(propNode)){
+                         queryPatternGraph.addVertex(propNode);
+            		}
+            		if(queryPatternGraph.findEdge(propNode, node) == null){
+            			queryPatternGraph.addEdge("edge"+counter, propNode, node);
+            			counter++;
+            		}
+            		
+            		// Create the subject node and the related edge
+            		GraphNode subjNode = new GraphNode(node.getSubject());
+            		                 		
+            		if(!queryPatternGraph.containsVertex(subjNode)){
+            			subjNode.setVariable("?e" + counterEntities);
+                        queryPatternGraph.addVertex(subjNode);
+                        classVariables.put(subjNode.getNodeName(), "?e" + counterEntities);
+                        counterEntities++;	                         
+            		}
+            		// Get the correct variable name
+            		else {
+            			subjNode.setVariable(classVariables.get(node.getSubject()));
+            		}
+            		
+            		if(queryPatternGraph.findEdge(subjNode, propNode) == null){
+            			queryPatternGraph.addEdge("edge"+counter, propNode, subjNode);
+            			counter++;
+            		}      		            		          	
+            	}
+            }                                
+        }              
+        // Process the literal property nodes 
+        // For each of them, check if there is already a literal node connected
+        // Otherwise add one.
+        int counterLiteral = 0;
+        for(GraphNode gn : propertyLitNodes){
+            Collection<String> incidentEdges = queryPatternGraph.getIncidentEdges(gn);
+            
+            if (incidentEdges.size() == 1) {
+            	GraphNode litNode = new GraphNode("", gn.getSubject(), gn.getNodeName(), gn.getDatatype(), gn.getLanguage());
+            	litNode.setVariable("?l"+counterLiteral);
+            	counterLiteral++;
+            	queryPatternGraph.addVertex(litNode);
+                 
+                 //add the related edge
+                 if(queryPatternGraph.findEdge(gn, litNode)==null){
+                     queryPatternGraph.addEdge("edge"+counter, gn, litNode);
+                     counter++;
+                 }                    
+            }           
+        }   
+        
+        return queryPatternGraph;
+    }  
     
     /**
      * This function transforms the query pattern graph into a SPARQL query.
@@ -1099,6 +1246,107 @@ public class GraphFunctions {
         
         return new SPARQL(sparqlQuery, triplets.size());
     }
+    
+    /**
+     * This function transforms a query pattern graph into a SPARQL query.
+     * @param queryPatternGraph The query pattern graph.
+     * @param namedGraph The named graph 
+     * @return A SPARQL query in the form of a String[].
+     */
+    // Last modified by @gkirtzou
+    public SPARQL getSparqlQuery(UndirectedSparseGraph<GraphNode, String> queryPatternGraph, 
+    		String namedGraph){
+    	
+    	HashSet<String> triplets = new HashSet<>();    	
+    	Collection<GraphNode> nodes = queryPatternGraph.getVertices();
+    	// Run across the query pattern graph
+    	for (GraphNode node : nodes) {
+    		
+    		// Work only on property nodes
+    		if (node.getIsType().equals("P")) {
+    			
+    			// Get its neighbors. It should be the subject and object of property
+    			Collection<GraphNode> neighborNodes = queryPatternGraph.getNeighbors(node);
+    			GraphNode subject = null;
+    			GraphNode object = null;
+    			assert(neighborNodes.size() != 2);
+    			
+    			// Find which node is which
+    			for (GraphNode neighbor : neighborNodes) {
+    				// The neighbor node is of type RDF class and is the subject
+    				if (neighbor.getIsType().equals("C") && neighbor.getNodeName().equals(node.getSubject())) {
+    					subject = neighbor;    			    	
+    				}
+    				// The neighbor node is of type RDF class and is the object 
+    				else if (neighbor.getIsType().equals("C") && neighbor.getNodeName().equals(node.getObject())) {
+    					object = neighbor;    			    	
+    				}
+    				// The neighbor node is of type literal and is the object
+    				else if (neighbor.getIsType().equals("L")) {
+    					object = neighbor;
+    				}      				    				
+    			}
+    	
+    			// Generate triplets    			   			
+    			// Subject class 
+    			triplets.add(subject.getVariable() + " a <" + subject.getNodeName() + ">.");
+    			// The property is of inter-entities type
+    			if (node.getObject() != null) {
+    				// Property
+    				triplets.add(subject.getVariable() + " <" + node.getNodeName() +"> " + object.getVariable() + "." );
+    				// Object class
+    				triplets.add(object.getVariable() + " a <" + object.getNodeName() + ">.");
+    			}
+    			// The property id of literal type
+    			else {
+    				// Property    		
+    				String triplet = subject.getVariable() + " <" + node.getNodeName() +"> ";
+    				// If literal has unknown value
+    				if (object.getVariable() != null) {
+    					triplet += object.getVariable();
+    				}
+    				// The literal has known value
+    				else {
+    					triplet += "\"" + object.getNodeName() + "\"";
+    				}
+    				// Extra processing if datatype or language is known	
+    				if (object.getDatatype() != null && !object.getDatatype().equals("null")) {
+    					triplet += "^^" + object.getDatatype() + ".";
+    				}
+    				else if (object.getLanguage() != null && !object.getLanguage().equals("null")) {
+    					triplet += "@" + object.getLanguage() + ".";
+    				}
+    				else {
+    					triplet += ".";
+    				}
+    				triplets.add(triplet);    				
+    			}   		
+    		}
+    	}    
+        	
+    	// Form SPARQL query
+        String[] sparqlQuery = null;
+        SPARQL querySp = null;
+        if (triplets.size() > 0) {
+	        sparqlQuery = new String[triplets.size() + 2];
+	        sparqlQuery[0]="SELECT DISTINCT * ";
+	        if (namedGraph != null && !namedGraph.equals("")) {	        	
+	        	sparqlQuery[0] = sparqlQuery[0] + " FROM <" + namedGraph + "> ";
+	        }
+	        sparqlQuery[0] = sparqlQuery[0] + "WHERE { ";
+	        int counter = 1;
+	        for(String t : triplets){
+	            sparqlQuery[counter] = t;
+	            counter++;
+	        }
+	        sparqlQuery[counter] = "} LIMIT 10";
+	        querySp = new SPARQL(sparqlQuery, triplets.size());
+        }
+    	
+    	return (querySp);
+    }
+    
+    
 
     /**
      * This function returns a SPARQL query from a single match. This applies to the
@@ -1110,8 +1358,8 @@ public class GraphFunctions {
     // Last modified by @gkirtzou
     public SPARQL getSparqlQuery(KeywordMatch currentMatch, String namedGraph, String query_prefix){
          
-        Set<String> triplets = new HashSet();
-        Set<String> filters = new HashSet();
+        Set<String> triplets = new HashSet<>();
+        Set<String> filters = new HashSet<>();
     
         if (currentMatch instanceof MatchRdfClass) { 
         	// Match to RDF Class

@@ -518,10 +518,10 @@ public class KeywordFunctions  {
                 isLiteral=1;
             }
         
-            System.out.println("isClass:" + isClass );
+          /*  System.out.println("isClass:" + isClass );
             System.out.println("isProperty:" + isProperty );
             System.out.println("isLiteral:" + isLiteral );
-            
+          */  
             if(isClass!=0 || isProperty!=0 || isLiteral!=0){
             
                 Vector<KeywordMatch> currentKeywordMatches = new Vector<KeywordMatch>();
@@ -534,7 +534,7 @@ public class KeywordFunctions  {
                     {
                     	
                         String refClass=setIterator.next();
-                        System.out.println("Class ref::" + refClass);
+                      //  System.out.println("Class ref::" + refClass);
                       //  currentKeywordMatches = "C"+ counter + "\t" + refClass;
                     	MatchRdfClass classMatch= new MatchRdfClass(refClass);
                     	currentKeywordMatches.add(classMatch); 
@@ -547,7 +547,7 @@ public class KeywordFunctions  {
                     while(setIterator.hasNext())
                     {
                         String refProperty=setIterator.next();
-                        System.out.println("Property ref::" + refProperty);
+                       // System.out.println("Property ref::" + refProperty);
                         /////
                         // Check if property is literal one
                         Set<String[]> propsTemp= dbStorage.getDetailsLiteralPropertyByURI(refProperty);               
@@ -557,7 +557,7 @@ public class KeywordFunctions  {
 	                        	assert(s.length != 2);	                        	
 	                            String propDetails1 = "L"+counter+"\t"+refProperty; //Old P
 	                            String propDetails2 = s[0]+"\t"+s[1];                            
-	                            System.out.println(propDetails1 + "\t" + propDetails2);
+	                           // System.out.println(propDetails1 + "\t" + propDetails2);
 	                          //  currentKeywordMatches.put(propDetails1, propDetails2);       
 	                        	MatchPropertyLiteral propMatch= new MatchPropertyLiteral(refProperty, s[0], s[1]);
 	                        	currentKeywordMatches.add(propMatch); 
@@ -572,7 +572,7 @@ public class KeywordFunctions  {
 	                        	assert(s.length != 2);	                       	   
 	                            String propDetails1 = "E"+counter+"\t"+refProperty; //OLD E
 	                            String propDetails2 = s[0]+" "+s[1];
-	                            System.out.println(propDetails1 + "\t" + propDetails2);
+	                            //System.out.println(propDetails1 + "\t" + propDetails2);
 	                            //currentKeywordMatches.put(propDetails1, propDetails2);
 	                        	MatchPropertyClass propMatch= new MatchPropertyClass(refProperty, s[0], s[1]);
 	                        	currentKeywordMatches.add(propMatch); 
@@ -587,7 +587,7 @@ public class KeywordFunctions  {
                     while(setIterator.hasNext())
                     {
                         String refLiteral=setIterator.next();
-                		System.out.println("Literal ref :: " + refLiteral);
+                		//System.out.println("Literal ref :: " + refLiteral);
                         Set<String[]> LiteralsTemp= dbStorage.getDetailsLiteral(refLiteral);
                         if(LiteralsTemp != null) {
 	                        for (String[] s : LiteralsTemp) {
@@ -596,7 +596,7 @@ public class KeywordFunctions  {
 	                        	String litDetails1="V"+counter+"\t"+refLiteral; //Old L
 	                        	String litDetails2= s[0]+"\t"+s[1]+ "\t" + s[2]+"\t"+s[3];
 	                        	
-	                        	System.out.println(litDetails1 + "\t" + litDetails2);
+	                        	//System.out.println(litDetails1 + "\t" + litDetails2);
 	                        	//currentKeywordMatches.put(litDetails1, litDetails2);
 	                        	MatchLiteral litMatch= new MatchLiteral(refLiteral, s[0], s[1], s[2], s[3]);
 	                        	currentKeywordMatches.add(litMatch); 
@@ -720,7 +720,7 @@ public class KeywordFunctions  {
         }
         // Calculate combinations
         Vector<Vector<KeywordMatch>> keywordCombinations = new Vector<Vector<KeywordMatch>>(numCombinations);
-        System.out.println("Mapped KeyMatches::\n" + mapKeywordMatches);
+        //System.out.println("Mapped KeyMatches::\n" + mapKeywordMatches);
         
         do{
            keywordCombinations.addElement(this.getCombination(counters, mapKeywordMatches));
@@ -736,11 +736,11 @@ public class KeywordFunctions  {
     	for(int i = 0; i < counters.length; i++) {        
 	    	combination.addElement(keywordMatches.get(i).get(counters[i]));	   
 	    }
-    	System.out.print("\n\nCombination::\n");
+    /*	System.out.print("\n\nCombination::\n");
 	    for (int i = 0; i < counters.length; i++) {
 	    	System.out.print(combination.get(i));
 	    	
-	    }
+	    }*/
     	return combination;
 
 	}

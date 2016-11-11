@@ -68,8 +68,17 @@ public class GraphNode{
     // language
     private String language;
     
+    private String variable;
        
-    /**
+    public String getVariable() {
+		return variable;
+	}
+
+	public void setVariable(String variable) {
+		this.variable = variable;
+	}
+
+	/**
      * Constructor of a class node.
      * @param nodeName The class name.
      */
@@ -82,6 +91,7 @@ public class GraphNode{
         this.object_filter = null;
         this.datatype = null;
         this.language = null;
+        this.variable = null;
     }
     
     /**
@@ -100,6 +110,7 @@ public class GraphNode{
         this.object_filter = null;
         this.datatype = null;
         this.language = null;
+        this.variable = null;
     }
     
     
@@ -120,6 +131,7 @@ public class GraphNode{
         this.object_filter = null;
         this.datatype = datatype;
         this.language = language;
+        this.variable = null;
     }
     
 
@@ -186,6 +198,7 @@ public class GraphNode{
         hash = 53 * hash + (this.object_filter != null ? this.object_filter.hashCode() : 0);
         hash = 53 * hash + (this.datatype != null ? this.datatype.hashCode() : 0);
         hash = 53 * hash + (this.language != null ? this.language.hashCode() : 0);
+   //     hash = 53 * hash + (this.variable != null ? this.variable.hashCode() : 0);
         return hash;
     }
     
@@ -329,25 +342,27 @@ public class GraphNode{
     				 "\tObject = " + this.object +
     				 "\tObject Filter Option = " + this.object_filter +
     				 "\tDatatype = " + this.datatype +
-    				 "\tLanguage = " + this.language + 
+    				 "\tLanguage = " + this.language +
+    				 "\nVariable = " + this.variable +
     				 "\n";
     	return(str);
     	
     }
-    
+   
     /**
      * @override used for graph visualization
      */
- /*   public String toString() {
+    /*public String toString() {
     	 int i = this.nodeName.lastIndexOf("/")+1;
          int j = this.nodeName.lastIndexOf("#")+1;
-         String str = null;
+         String str = this.variable + " ";
          if (i < j) {
-        	 str = this.nodeName.substring(j);
+        	 str = str + this.nodeName.substring(j);
          }
          else {
-        	 str = this.nodeName.substring(i);	        
+        	 str = str + this.nodeName.substring(i);	        
          }    	
-        return str;
+         
+         return str;
     }*/
 }
