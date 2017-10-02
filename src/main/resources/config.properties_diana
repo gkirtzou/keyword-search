@@ -1,0 +1,10 @@
+#DIANA
+bdbfiles_path=/home/gkirtzou/Dropbox/Work/Projects/LodGov/KeywordSearch/UseCasesData/diana/BerkeleyDBFiles
+endpoint=http://leonardo.imis.athena-innovation.gr:8891/diana/sparql
+prefixes=PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \
+         PREFIX diana: <http://leonardo.imis.athena-innovation.gr:8080/diana_lod/diana/> \
+         PREFIX owl: <http://www.w3.org/2002/07/owl#> \
+         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \
+         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>  
+temporal_properties=diana:version \
+                    diana:year

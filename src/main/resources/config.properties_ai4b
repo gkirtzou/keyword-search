@@ -1,0 +1,11 @@
+#AI4B
+bdbfiles_path=/home/gkirtzou/Dropbox/Work/Projects/LodGov/KeywordSearch/UseCasesData/ai4b/DocumentsForDevelopment/BerkeleyDBFiles 
+endpoint=http://snf-629975.vm.okeanos.grnet.gr:8190/ai4b/sparql
+prefixes=PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> \
+         PREFIX d2r: <http://sites.wiwiss.fu-berlin.de/suhl/bizer/d2r-server/config.rdf#>\
+         PREFIX sym: <http://snf-629975.vm.okeanos.grnet.gr:8890/resource/sym/>  \
+	 PREFIX owl: <http://www.w3.org/2002/07/owl#> \
+	 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> \
+	 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> \
+	 PREFIX meta: <http://www4.wiwiss.fu-berlin.de/bizer/d2r-server/metadata#> 
+
