@@ -35,17 +35,17 @@ public class KeywordIndicesBuild {
         ConstantsSingleton constants = ConstantsSingleton.getInstance();
         DatabasePut edp = new DatabasePut(constants.bdbfiles_path);
                 
-       // String ClassCsvFile = "/home/gkirtzou/Dropbox/Work/Projects/LodGov/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFClasses.csv";
-       // String PropertiesCsvFile = "/home/gkirtzou/Dropbox/Work/Projects/LodGov/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFProperties.csv";
+        String ClassCsvFile = "/home/gkirtzou/Dropbox/Work/Projects/LodGov/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFClasses.csv";
+        String PropertiesCsvFile = "/home/gkirtzou/Dropbox/Work/Projects/LodGov/KeywordSearch/UseCasesData/DBpedia/TestDataForBerkeyleyDB/RDFProperties.csv";
         //String PropertiesCsvFile = "/home/gkirtzou/Dropbox/Work/Projects/LodGov/KeywordSearch/UseCasesData/ai4b/DocumentsForDevelopment/RDFPropertiesTesting.csv";
                
         System.out.println("Named Graph <" + constants.named_graph +">");
         System.out.println("loading class db....");
-        edp.loadClassDb(constants.prefixes, constants.endpoint, constants.named_graph);
-        //edp.loadClassDb(ClassCsvFile);
+        //edp.loadClassDb(constants.prefixes, constants.endpoint, constants.named_graph);
+        edp.loadClassDb(ClassCsvFile);
         System.out.println("loading property db....");
-        edp.loadPropertyDb(constants.prefixes, constants.endpoint, constants.named_graph);
-        //edp.loadPropertyDb(PropertiesCsvFile);
+        //edp.loadPropertyDb(constants.prefixes, constants.endpoint, constants.named_graph);
+        edp.loadPropertyDb(PropertiesCsvFile);
         edp.loadLiteralDb(constants.prefixes, constants.endpoint, constants.named_graph);     
              
        

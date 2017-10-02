@@ -39,14 +39,16 @@ public class TestKeywordSearch {
         Initialize init = new Initialize();
         String endpoint = init.getConstants().endpoint;
         String prefixes = init.getConstants().prefixes;
-        String named_graph = init.getConstants().named_graph;
-        String query_prefix = init.getConstants().query_prefix;
+        String named_graph = init.getConstants().named_graph;       
                 
         // Keywords
-        String keywordInput = "\"2015-10-06 01:09:19.363\" isLastUpdatedAt 621261431615014053";//"\"Valerie Whittingham\"";
+        // ai4b
+        //String keywordInput = "\"2015-10-06 01:09:19.363\" isLastUpdatedAt 621261431615014053";//"\"Valerie Whittingham\"";
+        // dbpedia
+        String keywordInput = "organization logo";
        
         // Keyword to SPARQL
-        KeywordsToSparql key2sparql = new KeywordsToSparql(init.getDB(), prefixes,endpoint, named_graph, query_prefix);
+        KeywordsToSparql key2sparql = new KeywordsToSparql(init.getDB(), prefixes,endpoint, named_graph);
         Pair<ArrayList<SPARQL>, String> keywordResult = key2sparql.getSparqlFromKeywords(keywordInput); 
         ArrayList<SPARQL> sparqlQueryList = keywordResult.getValue0();
         String keywordsMessage = keywordResult.getValue1();
@@ -55,7 +57,7 @@ public class TestKeywordSearch {
         // Printing Sparql Queries or Error message
         System.out.println("Keyword input :: " + keywordInput);
         if(sparqlQueryList.size() == 0) {
-            System.out.println("No matches found for the input keywords.");
+            System.out.println("No matches found for the input keywords or keywords could not be connected.");
         }
         else if(sparqlQueryList.size() == 1 && sparqlQueryList.get(0).getSparqlQueryArray().length == 1){
             if(!keywordsMessage.equals("")){                         

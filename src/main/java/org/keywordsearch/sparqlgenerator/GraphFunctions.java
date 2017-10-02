@@ -149,6 +149,7 @@ public class GraphFunctions {
             GraphNode n = new GraphNode(currentClass.getURI());
             summaryGraph.addVertex(n);
         }
+     
         
         int counter = 0;
         //Insert the property nodes in the summary graph. 
@@ -165,8 +166,12 @@ public class GraphFunctions {
             }
             
             for(String [] classURI : propertyDetails) {
-            	assert(classURI.length !=2);
-            	// The inter-property node
+            	// Ignore inter-relation properties with missing information
+            	assert(classURI.length != 2);
+            	if (classURI[0].equals("null") || classURI[1].equals("null")) {             	
+            		continue;
+            	}          
+            	// The inter-property node               
             	GraphNode n = new GraphNode(propertyURI, classURI[0], classURI[1]);
             
             	//Add the property node if it doesn't already exist
@@ -190,7 +195,7 @@ public class GraphFunctions {
                 }
             }   
         }     
-        
+       // System.out.println("Summary Graph" + summaryGraph.toString());
      /*   // Insert Literal and literal-property to augment graph
         counter = 0;
         EntityCursor<Literal> literals = dbStorage.getLiteralCursor();
@@ -642,7 +647,7 @@ public class GraphFunctions {
      * @param augmGraph The augmented graph for these keywords
      * @param n1 The keyword node 1
      * @param n2 The keyword node 2 
-     * @return The shortest path
+     * @return The shortest path, or null if such path does not exist.
      */
     // Last modified by @gkirtzou
     public Map<GraphNode, String> getShortestPath(UndirectedSparseGraph<GraphNode, String> augmGraph, GraphNode n1, GraphNode n2){
@@ -652,8 +657,15 @@ public class GraphFunctions {
         Map<GraphNode, String> currentShortestPath = new HashMap<GraphNode, String>();
         
         
-       // Map m = shrtPathObject.getDistanceMap(n1);
-        int distance=shrtPathObject.getDistance(n1, n2).intValue();
+       // Map m = shrtPathObject.getDistanceMap(n1); 
+        Number distanceN = shrtPathObject.getDistance(n1, n2);
+        // If n1 and n2 lie in non connected components -- ignore
+        if (distanceN == null) {
+        	return null;
+        }
+        
+        int distance = distanceN.intValue();
+        
         //Start from the second keyword and get the edge of its shortest path
         GraphNode curNode=n2;
         String prevEdge="";
@@ -992,7 +1004,7 @@ public class GraphFunctions {
                  }                    
             }           
         }   
-        
+       
         return queryPatternGraph;
     }  
     
@@ -1287,6 +1299,9 @@ public class GraphFunctions {
     				}      				    				
     			}
     	
+    			System.out.println("Property " + node.toString());
+    			System.out.println("Subject " +  subject.toString());
+    			System.out.println("Object " + object.toString());
     			// Generate triplets    			   			
     			// Subject class 
     			triplets.add(subject.getVariable() + " a <" + subject.getNodeName() + ">.");
@@ -1352,11 +1367,11 @@ public class GraphFunctions {
      * This function returns a SPARQL query from a single match. This applies to the
      * Keyword Match Algorithm when the user has searched with only one keyword.
      * @param currentMatch The keyword match that is currently processed.
-     * @param query_prefix The RDF schema vocabulary.
+     * @param namedGraph The named graph where the query is targeted.
      * @return A SPARQL query in the form of String[].
      */
     // Last modified by @gkirtzou
-    public SPARQL getSparqlQuery(KeywordMatch currentMatch, String namedGraph, String query_prefix){
+    public SPARQL getSparqlQuery(KeywordMatch currentMatch, String namedGraph){
          
         Set<String> triplets = new HashSet<>();
         Set<String> filters = new HashSet<>();

@@ -57,7 +57,6 @@ public class KeywordsToSparql {
     BerkeleyDBStorage dbStorage;
     String endpoint; 
     String prefixes;
-    String query_prefix;
     String namedGraph;
     
     
@@ -75,7 +74,7 @@ public class KeywordsToSparql {
     
     
     public KeywordsToSparql(BerkeleyDBStorage dbStorage, String endpoint, 
-    						String prefixes, String namedGraph, String query_prefix) {
+    						String prefixes, String namedGraph) {
         //this.sparqlQueryList = null; 
         //this.message = "";
         //this.fkeywords = new KeywordFunctions();
@@ -84,7 +83,6 @@ public class KeywordsToSparql {
         this.endpoint = endpoint;
         this.prefixes = prefixes;
         this.namedGraph = namedGraph;
-        this.query_prefix = query_prefix;
         //this.isRankByNumTriples = false;
  
     }
@@ -240,7 +238,7 @@ public class KeywordsToSparql {
                 Iterator<KeywordMatch> iterCombinations = combinations.iterator();                          
                 while(iterCombinations.hasNext()) {
                     KeywordMatch currentCombination = iterCombinations.next();
-                    SPARQL q = fgraph.getSparqlQuery(currentCombination, this.namedGraph, this.query_prefix);
+                    SPARQL q = fgraph.getSparqlQuery(currentCombination, this.namedGraph);
                     if (q != null){
                     	sparqlQueryList.add(q);
                     }
@@ -264,14 +262,15 @@ public class KeywordsToSparql {
             
             //Create the summary graph  -- Maybe create once with berkeley files and load?
             UndirectedSparseGraph<GraphNode, String> summaryGraph = fgraph.getSummaryGraph(dbStorage);
-                    
+
             //Create all the possible combinations from the above matches
             Vector<Vector<KeywordMatch>> keywordCombinations=fkeywords.getKeywordCombinations(userKwords, keywordMatches);
                              
             //Process each combination separately:
             for (Vector<KeywordMatch> currCombination: keywordCombinations) {
+            	System.out.println("Working on combination::" + currCombination.toString());
                 // Create the augmented graph
-                UndirectedSparseGraph<GraphNode, String> augmentedGraph=fgraph.getAugmentedGraph(currCombination, summaryGraph, dbStorage);
+                UndirectedSparseGraph<GraphNode, String> augmentedGraph=fgraph.getAugmentedGraph(currCombination, summaryGraph, dbStorage);                             
                 
                 // Get all pairs
                 Vector<Pair<KeywordMatch, KeywordMatch>>  combinationPairs=fkeywords.getCombinationPairs(currCombination);               
@@ -283,18 +282,24 @@ public class KeywordsToSparql {
                 double longestSP = 0.0;
                 for(Pair<KeywordMatch, KeywordMatch> pair : combinationPairs){
                     // Get the end nodes of the shortest path                    
-                    GraphNode n1 = fgraph.getNode(pair.getValue0());
-                    GraphNode n2 = fgraph.getNode(pair.getValue1());
+                    GraphNode n1 = fgraph.getNode(pair.getValue0());                   
+                    GraphNode n2 = fgraph.getNode(pair.getValue1());                               
                                        
                     // Calculate the shortest path
                     Map<GraphNode, String> sPath =fgraph.getShortestPath(augmentedGraph, n1, n2); 
+                    if (sPath == null) {
+                    	continue;
+                    } 
                     averageSP = averageSP + sPath.size();
                     if (longestSP < sPath.size())
                         longestSP = sPath.size();
                     shortestPathSet.add(sPath);      
                 }
-                
-                UndirectedSparseGraph<GraphNode, String> queryPatternGraph = fgraph.getQueryPatternGraph(shortestPathSet, augmentedGraph);                 
+                if (shortestPathSet.isEmpty()) {
+                	continue;
+                }
+                UndirectedSparseGraph<GraphNode, String> queryPatternGraph = fgraph.getQueryPatternGraph(shortestPathSet, augmentedGraph);
+                               
                 SPARQL q = fgraph.getSparqlQuery(queryPatternGraph, this.namedGraph);            
                 q.setWeightAverageSP(averageSP / combinationPairs.size());
                 q.setWeightLongestSP(longestSP);
