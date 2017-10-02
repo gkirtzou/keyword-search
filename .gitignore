@@ -1,0 +1,7 @@
+.classpath
+.project
+.settings/
+nbactions.xml
+src/main/resources/wordnet/linux/dict/.svn/
+/target/
+
